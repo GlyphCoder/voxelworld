@@ -2,187 +2,168 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Voxel Builder - Ultimate Edition</title>
+    <title>Voxel Builder - Omni Edition</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap');
 
-        body { margin: 0; overflow: hidden; font-family: 'Fredoka', sans-serif; user-select: none; background: #1a1a2e; }
-        
-        /* UI Overlay */
-        #ui-layer {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none;
-            z-index: 10;
+        :root {
+            /* Default to Dark Mode variables */
+            --bg-color: #1a1a2e;
+            --ui-bg: rgba(20, 20, 35, 0.85);
+            --ui-border: rgba(255,255,255,0.15);
+            --text-color: #eee;
+            --accent: #4fa4b8;
+            --slot-bg: #333;
+            --btn-shadow: rgba(0,0,0,0.5);
         }
 
-        /* World Tabs */
-        #world-tabs {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            background: rgba(0,0,0,0.5);
-            border-radius: 30px;
-            overflow: hidden;
+        body.light-mode {
+            --bg-color: #87CEEB;
+            --ui-bg: rgba(255, 255, 255, 0.65);
+            --ui-border: rgba(0,0,0,0.1);
+            --text-color: #333;
+            --accent: #2c7a8b;
+            --slot-bg: #e0e0e0;
+            --btn-shadow: rgba(0,0,0,0.2);
+        }
+
+        body { margin: 0; overflow: hidden; font-family: 'Fredoka', sans-serif; user-select: none; background: var(--bg-color); transition: background 0.3s; }
+        
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+
+        /* Top Bar: Theme & Tabs */
+        #top-area {
+            position: absolute; top: 15px; left: 0; width: 100%;
+            display: flex; justify-content: center; align-items: flex-start;
             pointer-events: auto;
+        }
+
+        #theme-toggle {
+            position: absolute; left: 20px; top: 0;
+            background: var(--ui-bg); border: 2px solid var(--ui-border);
+            color: var(--text-color); font-size: 20px;
+            padding: 8px 12px; border-radius: 50%;
+            cursor: pointer; backdrop-filter: blur(5px);
+            transition: transform 0.2s;
+        }
+        #theme-toggle:hover { transform: scale(1.1); }
+
+        /* Dynamic Tabs */
+        #tab-container {
+            display: flex; gap: 5px;
+            background: var(--ui-bg);
+            padding: 5px; border-radius: 12px;
+            border: 1px solid var(--ui-border);
             backdrop-filter: blur(5px);
-            border: 2px solid rgba(255,255,255,0.2);
+            max-width: 80%; overflow-x: auto;
         }
-        .tab {
-            padding: 12px 30px;
-            cursor: pointer;
-            color: rgba(255,255,255,0.6);
-            font-weight: 600;
-            transition: all 0.3s;
-            background: transparent;
-            border: none;
-            font-family: inherit;
-            font-size: 16px;
+
+        .world-tab {
+            padding: 6px 15px; border-radius: 8px;
+            background: transparent; color: var(--text-color);
+            border: 1px solid transparent; cursor: pointer;
+            font-size: 13px; font-weight: 600;
+            display: flex; align-items: center; gap: 8px;
+            white-space: nowrap;
         }
-        .tab.active {
-            background: rgba(79, 164, 184, 0.8);
-            color: white;
+        .world-tab.active { background: var(--accent); color: white; box-shadow: 0 2px 5px var(--btn-shadow); }
+        .world-tab:hover:not(.active) { background: rgba(128,128,128,0.2); }
+        
+        .del-tab {
+            font-size: 10px; width: 16px; height: 16px;
+            background: rgba(0,0,0,0.2); color: white;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            opacity: 0.6; transition: opacity 0.2s;
         }
-        .tab:hover:not(.active) { color: white; background: rgba(255,255,255,0.1); }
+        .del-tab:hover { opacity: 1; background: #ff5252; }
+
+        #add-tab-btn {
+            padding: 6px 12px; background: rgba(0,255,0,0.1); color: var(--text-color);
+            border: 1px dashed var(--ui-border); border-radius: 8px; cursor: pointer;
+        }
+        #add-tab-btn:hover { background: rgba(0,255,0,0.3); }
+
+
+        /* Controls */
+        #side-controls {
+            position: absolute; top: 80px; left: 20px;
+            display: flex; flex-direction: column; gap: 10px; pointer-events: auto;
+        }
+        .btn {
+            background: var(--ui-bg); color: var(--text-color);
+            border: 1px solid var(--ui-border); padding: 8px 16px;
+            border-radius: 8px; cursor: pointer; font-weight: 600; font-family: inherit;
+            backdrop-filter: blur(4px); box-shadow: 0 4px 5px var(--btn-shadow);
+        }
+        .btn:active { transform: translateY(2px); box-shadow: none; }
+
+        /* Instructions - 40% Smaller */
+        #instructions {
+            position: absolute; top: 20px; right: 20px;
+            background: var(--ui-bg); padding: 10px 15px;
+            border-radius: 10px; color: var(--text-color);
+            font-size: 11px; line-height: 1.5; /* Smaller font */
+            backdrop-filter: blur(4px); border: 1px solid var(--ui-border);
+            transform: scale(0.9); transform-origin: top right;
+        }
+        #instructions b { color: var(--accent); }
 
         /* Hotbar */
         #hotbar {
-            position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(28, 28, 45, 0.7);
-            backdrop-filter: blur(10px);
-            padding: 12px;
-            border-radius: 20px;
-            display: flex;
-            gap: 12px;
-            border: 3px solid rgba(255,255,255,0.3);
-            pointer-events: auto;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: var(--ui-bg); padding: 8px; border-radius: 16px;
+            display: flex; gap: 8px; border: 1px solid var(--ui-border);
+            pointer-events: auto; box-shadow: 0 5px 20px var(--btn-shadow);
         }
-
         .slot {
-            width: 64px; height: 64px;
-            border-radius: 16px; cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-            position: relative;
-            background-color: #444;
-            border: 3px solid #555;
-            box-shadow: inset 0 0 15px rgba(0,0,0,0.3);
-            display: flex; justify-content: center; align-items: center;
-            font-size: 32px; /* Emoji icon size */
+            width: 48px; height: 48px; border-radius: 10px;
+            background: var(--slot-bg); border: 2px solid rgba(255,255,255,0.1);
+            cursor: pointer; position: relative;
+            display: flex; justify-content: center; align-items: center; font-size: 24px;
+            transition: transform 0.1s;
         }
-
-        .slot:hover { transform: scale(1.1) translateY(-10px); border-color: #fff; z-index: 10; background-color: #666;}
+        .slot:hover { transform: scale(1.1); border-color: var(--accent); }
         .slot:active { transform: scale(0.95); }
-        
-        /* Styled Tooltips */
-        .slot::after {
-            content: attr(data-label);
-            position: absolute;
-            bottom: -35px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-size: 12px;
-            white-space: nowrap;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s, bottom 0.2s;
-        }
-        .slot:hover::after { opacity: 1; bottom: -45px; }
 
-        /* Slot Visuals */
-        .slot.grass { background: #58a04c; color: #2e5e26; }
-        .slot.stone { background: #8d8d8d; color: #515151; }
-        .slot.wood  { background: #74523d; color: #3e2b20; }
-        .slot.brick { background: #b95f58; color: #722f2a; }
-        .slot.glass { background: #aed9e0; color: #ffffff; border-color: #d0f0f5;}
-        .slot.plank { background: #deb887; color: #9c7c53; }
-        .slot.light { background: #fff3bb; color: #ffcc00; box-shadow: 0 0 20px #fff3bb; border-color: #ffee88;}
-        .slot.waterBlock { background: #29b6f6; color: #e3f2fd; opacity: 0.8; border-color: #81d4fa;}
-
-        /* Controls Area */
-        #side-controls {
-            position: absolute;
-            top: 100px; left: 30px;
-            display: flex; flex-direction: column; gap: 15px;
-            pointer-events: auto;
-        }
-
-        button.btn {
-            background: rgba(255,255,255,0.9); color: #333; border: none;
-            padding: 12px 24px; border-radius: 12px; cursor: pointer;
-            font-family: inherit; font-weight: 700; font-size: 14px;
-            box-shadow: 0 4px 0 #aaa, 0 8px 20px rgba(0,0,0,0.3);
-            transition: all 0.1s;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        button.btn:active { transform: translateY(4px); box-shadow: 0 0 0 #aaa, inset 0 2px 5px rgba(0,0,0,0.2); }
-        button.btn.primary { background: #4fa4b8; color: white; box-shadow: 0 4px 0 #2e6e7d, 0 8px 20px rgba(0,0,0,0.4); }
-        button.btn.danger { background: #ff5252; color: white; box-shadow: 0 4px 0 #d32f2f, 0 8px 20px rgba(0,0,0,0.4); }
-
-        /* Instructions */
-        #instructions {
-            position: absolute; top: 30px; right: 30px;
-            background: rgba(0,0,0,0.6); padding: 20px;
-            border-radius: 16px; color: rgba(255,255,255,0.9);
-            font-size: 14px; line-height: 1.8;
-            backdrop-filter: blur(8px); border: 2px solid rgba(255,255,255,0.1);
-        }
-        #instructions b { color: #4fa4b8; }
-
-        /* Carrying Indicator */
+        /* Cursor Icon */
         #carrying-cursor {
-            position: fixed;
-            pointer-events: none;
-            z-index: 100;
-            display: none;
-            font-size: 24px;
-            filter: drop-shadow(0 0 10px rgba(255,255,255,0.5));
+            position: fixed; pointer-events: none; z-index: 100;
+            display: none; font-size: 24px; filter: drop-shadow(0 0 5px rgba(0,0,0,0.5));
         }
 
         #fileInput { display: none; }
     </style>
 </head>
-<body>
-
-    <div id="ui-layer">
-        <div id="world-tabs">
-            <button class="tab active" onclick="switchWorld(0)">🗺️ World Alpha</button>
-            <button class="tab" onclick="switchWorld(1)">🏝️ World Beta</button>
+<body class="dark-mode"> <div id="ui-layer">
+        <div id="top-area">
+            <button id="theme-toggle" onclick="toggleTheme()">🌗</button>
+            <div id="tab-container">
+                <button id="add-tab-btn" onclick="createNewWorld()">+</button>
+            </div>
         </div>
 
         <div id="side-controls">
-            <button class="btn primary" onclick="downloadWorld()">💾 Download</button>
-            <button class="btn" onclick="triggerLoad()">📂 Open File</button>
-            <button class="btn danger" onclick="clearCurrentWorld()">🗑️ Wipe World</button>
+            <button class="btn" onclick="downloadWorld()">💾 Save .JSON</button>
+            <button class="btn" onclick="triggerLoad()">📂 Load .JSON</button>
         </div>
 
         <div id="instructions">
-            <b>Left Click Block</b>: Pick Up<br>
-            <b>Left Click Empty</b>: Place<br>
-            <b>Right Click + Drag</b>: Rotate Camera<br>
-            <b>R Key</b>: Rotate Beams<br>
-            <b>Esc Key</b>: Cancel/Drop
+            <b>Left Click Block:</b> Pick Up<br>
+            <b>Left Click Empty:</b> Place<br>
+            <b>Right Click+Drag:</b> Camera<br>
+            <b>R Key:</b> Rotate Beam<br>
+            <b>ESC:</b> Cancel
         </div>
 
         <div id="hotbar">
-            <div class="slot grass" data-label="Grass" onclick="startPlacing('grass')">🌿</div>
-            <div class="slot stone" data-label="Stone" onclick="startPlacing('stone')">🪨</div>
-            <div class="slot wood" data-label="Wood Log" onclick="startPlacing('wood')">🪵</div>
-            <div class="slot plank" data-label="Beam" onclick="startPlacing('plank')">📏</div>
-            <div class="slot brick" data-label="Brick" onclick="startPlacing('brick')">🧱</div>
-            <div class="slot glass" data-label="Clear Glass" onclick="startPlacing('glass')">🔲</div>
-            <div class="slot waterBlock" data-label="Water" onclick="startPlacing('waterBlock')">💧</div>
-            <div class="slot light" data-label="Light Block" onclick="startPlacing('light')">💡</div>
+            <div class="slot" style="background:#58a04c" onclick="startPlacing('grass')">🌿</div>
+            <div class="slot" style="background:#7d7d7d" onclick="startPlacing('stone')">🪨</div>
+            <div class="slot" style="background:#8b5a2b" onclick="startPlacing('wood')">🪵</div>
+            <div class="slot" style="background:#d2a679" onclick="startPlacing('plank')">📏</div>
+            <div class="slot" style="background:#a04c4c" onclick="startPlacing('brick')">🧱</div>
+            <div class="slot" style="background:#aed9e0" onclick="startPlacing('glass')">🔲</div>
+            <div class="slot" style="background:#4fa4b8" onclick="startPlacing('waterBlock')">💧</div>
+            <div class="slot" style="background:#fff3bb" onclick="startPlacing('light')">💡</div>
         </div>
 
         <div id="carrying-cursor">📦</div>
@@ -203,93 +184,78 @@
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-        // --- Configuration ---
+        // --- Config ---
         const CONFIG = {
             blockSize: 50,
-            islandSize: 50, // Much bigger area (50x50 blocks)
+            islandSize: 50, 
             waterLevel: -30,
-            fogColor: 0xcce0ff, // Hazy horizon color
-            sunColor: 0xfff5e1
+            darkSky: 0x1a1a2e,
+            lightSky: 0x87CEEB,
+            maxWorlds: 10
         };
 
         let camera, scene, renderer, controls;
         let groundPlane, waterMesh;
         let raycaster, pointer;
         
-        // World Data Management
-        let currentWorldIdx = 0;
-        const worlds = [
-            { interactables: [] }, // World Alpha Data
-            { interactables: [] }  // World Beta Data
-        ];
+        // World Management
+        let worlds = []; // Array of objects: { id: 1, data: [] }
+        let currentWorldId = null;
+        let worldCounter = 1;
 
-        // Scene Objects collections (refreshed on world switch)
-        let currentInteractables = []; // Things we can pick up
-        let collisionObjects = []; // Things we can place ON (ground + interactables)
+        // Scene Objects
+        let currentInteractables = []; 
+        let collisionObjects = []; 
         
         // Interaction State
         let carriedBlock = null; 
-        let placementGhost = null; // Visual guide where block will land
+        let placementGhost = null; 
         const materials = {};
+        
+        // Theme State
+        let isDarkMode = true;
 
         init();
         animate();
 
-        // Expose to HTML
+        // Global functions
         window.startPlacing = startPlacing;
         window.downloadWorld = downloadWorld;
         window.triggerLoad = () => document.getElementById('fileInput').click();
-        window.clearCurrentWorld = clearCurrentWorld;
+        window.toggleTheme = toggleTheme;
+        window.createNewWorld = createNewWorld;
         window.switchWorld = switchWorld;
+        window.deleteWorld = deleteWorld;
 
         document.getElementById('fileInput').addEventListener('change', handleFileLoad, false);
 
         function init() {
-            // 1. Scene & Fog
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(CONFIG.fogColor);
-            // Exponential fog for smoother horizon blend
-            scene.fog = new THREE.FogExp2(CONFIG.fogColor, 0.00045);
+            scene.background = new THREE.Color(CONFIG.darkSky);
+            scene.fog = new THREE.Fog(CONFIG.darkSky, 500, 2500);
 
-            // 2. Camera
-            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 8000);
-            // Start zoomed out further for the bigger world
-            camera.position.set(1800, 1500, 1800);
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 5000);
+            camera.position.set(1200, 1000, 1200);
 
-            // 3. Renderer (High Quality)
-            renderer = new THREE.WebGLRenderer({ antialias: true,powerPreference: "high-performance" });
-            renderer.setPixelRatio(window.devicePixelRatio); // Max resolution
+            // Optimization: No pixelRatio scaling (saves GPU)
+            renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Softer shadows
-            // Need physical lighting for realistic water/glass
-            renderer.useLegacyLights = false; 
-            renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            renderer.toneMappingExposure = 1.0;
+            renderer.shadowMap.type = THREE.PCFShadowMap; // Faster than PCFSoft
             document.body.appendChild(renderer.domElement);
 
-            // 4. Lights
             setupLighting();
-
-            // 5. Materials & Environment setup
-            generateMaterials();
+            generateMaterials(); // Pixel art style
             createEnvironment();
 
-            // 6. Controls
             controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.08;
             controls.maxPolarAngle = Math.PI / 2 - 0.05; 
             controls.minDistance = 100;
-            controls.maxDistance = 4000;
-            // Only allow right click for camera rotation
-            controls.mouseButtons = {
-                LEFT: null, 
-                MIDDLE: THREE.MOUSE.DOLLY,
-                RIGHT: THREE.MOUSE.ROTATE 
-            };
+            controls.maxDistance = 3000;
+            controls.mouseButtons = { LEFT: null, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
 
-            // 7. Interaction Setup
             raycaster = new THREE.Raycaster();
             pointer = new THREE.Vector2();
 
@@ -298,458 +264,370 @@
             document.addEventListener('pointermove', onPointerMove);
             document.addEventListener('keydown', onKeyDown);
 
-            // Initial World Load
-            switchWorld(0);
+            // Create initial world
+            createNewWorld();
         }
 
-        // --- LIGHTING ---
-        function setupLighting() {
-            const ambient = new THREE.AmbientLight(CONFIG.fogColor, 0.4);
-            scene.add(ambient);
-
-            const sun = new THREE.DirectionalLight(CONFIG.sunColor, 2.5);
-            sun.position.set(1000, 2000, 1000);
-            sun.castShadow = true;
-            // Massive shadow map for the large area
-            sun.shadow.mapSize.width = 4096;
-            sun.shadow.mapSize.height = 4096;
-            sun.shadow.camera.near = 100;
-            sun.shadow.camera.far = 5000;
-            const d = 2500;
-            sun.shadow.camera.left = -d; sun.shadow.camera.right = d;
-            sun.shadow.camera.top = d;  sun.shadow.camera.bottom = -d;
-            sun.shadow.bias = -0.0005;
-            scene.add(sun);
-
-            // Add a subtle hemisphere light for better outdoor gradients
-            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
-            hemiLight.position.set(0, 500, 0);
-            scene.add(hemiLight);
-        }
-
-        // --- ENVIRONMENT & SURROUNDINGS ---
-        function createEnvironment() {
-            const sizeInUnits = CONFIG.blockSize * CONFIG.islandSize;
-
-            // A. The Main Build Platform
-            const islandGeo = new THREE.BoxGeometry(sizeInUnits, CONFIG.blockSize, sizeInUnits);
-            // Make the top grass, sides dirt
-            groundPlane = new THREE.Mesh(islandGeo, materials['grass_block']);
-            groundPlane.position.y = -CONFIG.blockSize / 2; 
-            groundPlane.receiveShadow = true;
-            scene.add(groundPlane);
+        // --- Theme System ---
+        function toggleTheme() {
+            isDarkMode = !isDarkMode;
+            document.body.className = isDarkMode ? 'dark-mode' : 'light-mode';
             
-            // B. Realistic Water
-            const waterGeo = new THREE.PlaneGeometry(10000, 10000);
-            waterMesh = new THREE.Mesh(waterGeo, materials['realisticWater']);
-            waterMesh.rotation.x = -Math.PI / 2;
-            waterMesh.position.y = CONFIG.waterLevel;
-            waterMesh.receiveShadow = true;
-            scene.add(waterMesh);
-
-            // C. Distant Mountains & Rocks
-            generateSurroundings(sizeInUnits);
+            const color = isDarkMode ? CONFIG.darkSky : CONFIG.lightSky;
+            scene.background.setHex(color);
+            scene.fog.color.setHex(color);
+            
+            // Adjust light intensity based on mode
+            const sun = scene.getObjectByName('sun');
+            if(sun) sun.intensity = isDarkMode ? 1.5 : 2.0;
         }
 
-        function generateSurroundings(islandWidth) {
-            // Simple low-poly mountains in the distance
-            const mtnMat = new THREE.MeshLambertMaterial({ color: 0x5a6e8c, flatShading: true });
-            const rockMat = new THREE.MeshLambertMaterial({ color: 0x7d7d7d, flatShading: true });
-
-            for(let i=0; i<60; i++) {
-                const angle = (i / 60) * Math.PI * 2;
-                // Push them far out
-                const dist = islandWidth/2 + 800 + Math.random() * 2000; 
-                const x = Math.cos(angle) * dist;
-                const z = Math.sin(angle) * dist;
-
-                let mesh;
-                if(i % 5 === 0) {
-                    // Huge mountain
-                    const height = 800 + Math.random() * 1200;
-                    const base = 600 + Math.random() * 800;
-                    mesh = new THREE.Mesh(new THREE.ConeGeometry(base, height, 6), mtnMat);
-                    mesh.position.set(x, height/2 + CONFIG.waterLevel - 100, z);
-                } else {
-                    // Smaller Rock cluster
-                    const rSize = 100 + Math.random() * 300;
-                    mesh = new THREE.Mesh(new THREE.DodecahedronGeometry(rSize, 0), rockMat);
-                    mesh.position.set(x, CONFIG.waterLevel, z);
-                    mesh.rotation.set(Math.random(), Math.random(), Math.random());
-                }
-                scene.add(mesh);
-            }
-        }
-
-
-        // --- PROCEDURAL TEXTURES & MATERIALS ---
-        function createPixelTexture(color, noiseAmt = 20, AddBorder = true) {
+        // --- Optimized Materials (Pixel Art) ---
+        function createPixelTexture(color, transparent=false) {
             const size = 64;
             const canvas = document.createElement('canvas');
             canvas.width = size; canvas.height = size;
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = color; ctx.fillRect(0,0,size,size);
-            for(let i=0; i<500; i++) {
-                const x = Math.floor(Math.random()*size); const y = Math.floor(Math.random()*size);
-                const shade = Math.random() > 0.5 ? noiseAmt : -noiseAmt;
-                ctx.fillStyle = shade > 0 ? `rgba(255,255,255,0.15)` : `rgba(0,0,0,0.15)`;
-                ctx.fillRect(x,y, Math.random()*4+1, Math.random()*4+1);
+            
+            // Simple noise
+            for(let i=0; i<200; i++) {
+                ctx.fillStyle = Math.random()>0.5 ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+                const x = Math.floor(Math.random()*size);
+                const y = Math.floor(Math.random()*size);
+                ctx.fillRect(x,y,4,4);
             }
-            if(AddBorder){
-                ctx.strokeStyle = "rgba(0,0,0,0.2)"; ctx.lineWidth = 4; ctx.strokeRect(0,0,size,size);
-            }
+            
+            // Border
+            ctx.strokeStyle = "rgba(0,0,0,0.2)"; ctx.lineWidth = 4; ctx.strokeRect(0,0,size,size);
+
             const tex = new THREE.CanvasTexture(canvas);
-            tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter;
-            tex.colorSpace = THREE.SRGBColorSpace;
+            tex.magFilter = THREE.NearestFilter; // Key for pixel look
             return tex;
         }
 
-        function createWaterBumpMap() {
-             const size = 256;
-             const canvas = document.createElement('canvas');
-             canvas.width = size; canvas.height = size;
-             const ctx = canvas.getContext('2d');
-             ctx.fillStyle = '#7F7Fff'; // Flat normal
-             ctx.fillRect(0,0,size,size);
-             // Create some wavy noise patterns
-             for (let i = 0; i < 50; i++) {
-                ctx.beginPath();
-                const startX = Math.random() * size; const startY = Math.random() * size;
-                ctx.moveTo(startX, startY);
-                ctx.bezierCurveTo(startX + Math.random()*100-50, startY + Math.random()*100-50,
-                                  startX + Math.random()*100-50, startY + Math.random()*100-50,
-                                  startX + Math.random()*200-100, startY + Math.random()*200-100);
-                ctx.strokeStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
-                ctx.lineWidth = 5 + Math.random() * 10;
-                ctx.stroke();
-             }
-             const tex = new THREE.CanvasTexture(canvas);
-             tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-             tex.repeat.set(8,8);
-             return tex;
-        }
-
-
         function generateMaterials() {
-            // Basic building blocks (Lambert is fine for these)
-            const mkMat = (col) => new THREE.MeshLambertMaterial({ map: createPixelTexture(col) });
-            materials['stone'] = mkMat('#888c8d');
-            materials['wood'] = mkMat('#6b5344');
-            materials['brick'] = mkMat('#b85c54');
-            materials['plank'] = mkMat('#d4b483');
-
-            // Special: Grass Block
-            const dirtTex = createPixelTexture('#5c4133');
-            const grassTex = createPixelTexture('#539c47');
-            materials['grass_block'] = [
-                new THREE.MeshLambertMaterial({ map: dirtTex }), new THREE.MeshLambertMaterial({ map: dirtTex }),
-                new THREE.MeshLambertMaterial({ map: grassTex }), new THREE.MeshLambertMaterial({ map: dirtTex }),
-                new THREE.MeshLambertMaterial({ map: dirtTex }), new THREE.MeshLambertMaterial({ map: dirtTex })
-            ];
-            materials['grass'] = materials['grass_block']; // Alias
-
-            // Special: NEW Clear Glass (Physical Material)
-            materials['glass'] = new THREE.MeshPhysicalMaterial({  
-                color: 0xffffff, metalness: 0, roughness: 0,
-                transmission: 0.98, // Highly transparent
-                opacity: 1, transparent: true,
-                envMapIntensity: 1.0, ior: 1.5,
-                thickness: 2.0,
-                map: createPixelTexture('#ffffff', 5, true) // subtle grid
+            // Using MeshLambertMaterial for performance (not Physical)
+            const mkMat = (c) => new THREE.MeshLambertMaterial({ map: createPixelTexture(c) });
+            
+            materials['stone'] = mkMat('#7d7d7d');
+            materials['wood'] = mkMat('#8b5a2b');
+            materials['brick'] = mkMat('#a04c4c');
+            materials['plank'] = mkMat('#d2a679');
+            
+            materials['glass'] = new THREE.MeshLambertMaterial({
+                color: 0xaed9e0, transparent: true, opacity: 0.4,
+                map: createPixelTexture('#aed9e0')
+            });
+            
+            materials['waterBlock'] = new THREE.MeshLambertMaterial({
+                color: 0x4fa4b8, transparent: true, opacity: 0.7,
+                map: createPixelTexture('#4fa4b8')
             });
 
-            // Special: NEW Water Block (Placeable)
-            materials['waterBlock'] = new THREE.MeshPhysicalMaterial({
-                color: 0x00aaff, transmission: 0.8, opacity: 0.9, transparent: true,
-                roughness: 0.1, metalness: 0.1, ior: 1.33, thickness: 5,
-                map: createPixelTexture('#00aaff', 10, false)
-            });
-
-            // Special: NEW Light Block (Emissive)
             materials['light'] = new THREE.MeshLambertMaterial({
-                color: 0xfff3bb,
-                emissive: 0xffe066, // Glow color
-                emissiveIntensity: 2.0,
-                map: createPixelTexture('#fff3bb', 5, true)
+                color: 0xfff3bb, emissive: 0xffe066, emissiveIntensity: 1,
+                map: createPixelTexture('#fff3bb')
             });
 
-            // Environment: Realistic Water Surface
-            const waterBump = createWaterBumpMap();
-            materials['realisticWater'] = new THREE.MeshPhysicalMaterial({
-                color: 0x2288ff,
-                metalness: 0.1, roughness: 0.15,
-                transmission: 0.85, // See-through to bottom
-                opacity: 0.9, transparent: true,
-                ior: 1.33,
-                bumpMap: waterBump, bumpScale: 0.3,
-                envMapIntensity: 1.5,
+            // Grass
+            const dirt = createPixelTexture('#5d4037');
+            const grass = createPixelTexture('#58a04c');
+            materials['grass'] = [
+                new THREE.MeshLambertMaterial({map: dirt}), new THREE.MeshLambertMaterial({map: dirt}),
+                new THREE.MeshLambertMaterial({map: grass}), new THREE.MeshLambertMaterial({map: dirt}),
+                new THREE.MeshLambertMaterial({map: dirt}), new THREE.MeshLambertMaterial({map: dirt})
+            ];
+            
+            // Environment Water
+            materials['sea'] = new THREE.MeshLambertMaterial({
+                color: 0x4fa4b8, transparent: true, opacity: 0.85
             });
         }
 
+        function setupLighting() {
+            const amb = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(amb);
+            
+            const sun = new THREE.DirectionalLight(0xfff5e1, 1.5);
+            sun.name = 'sun';
+            sun.position.set(500, 1000, 500);
+            sun.castShadow = true;
+            sun.shadow.mapSize.set(2048, 2048); // Reduced from 4096
+            sun.shadow.camera.far = 3500;
+            const d = 1500;
+            sun.shadow.camera.left = -d; sun.shadow.camera.right = d;
+            sun.shadow.camera.top = d; sun.shadow.camera.bottom = -d;
+            scene.add(sun);
+        }
 
-        // --- INTERACTION LOGIC (Click-Carry-Click) ---
+        function createEnvironment() {
+            // Platform
+            const size = CONFIG.blockSize * CONFIG.islandSize;
+            const geo = new THREE.BoxGeometry(size, CONFIG.blockSize, size);
+            groundPlane = new THREE.Mesh(geo, materials['grass']);
+            groundPlane.position.y = -CONFIG.blockSize/2;
+            groundPlane.receiveShadow = true;
+            scene.add(groundPlane);
 
-        // 1. Start from Hotbar
+            // Water Plane
+            const wGeo = new THREE.PlaneGeometry(8000, 8000);
+            waterMesh = new THREE.Mesh(wGeo, materials['sea']);
+            waterMesh.rotation.x = -Math.PI/2;
+            waterMesh.position.y = CONFIG.waterLevel;
+            scene.add(waterMesh);
+
+            // Mountains Only
+            const mtnMat = new THREE.MeshLambertMaterial({color: 0x5a6e8c});
+            for(let i=0; i<30; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const dist = size/2 + 600 + Math.random()*1500;
+                const h = 800 + Math.random()*1000;
+                const r = 600 + Math.random()*600;
+                const cone = new THREE.Mesh(new THREE.ConeGeometry(r, h, 5), mtnMat);
+                cone.position.set(Math.cos(angle)*dist, h/2 - 100, Math.sin(angle)*dist);
+                scene.add(cone);
+            }
+        }
+
+        // --- Interaction ---
         function startPlacing(type) {
-            if (carriedBlock) dropCarriedBlock(); // Drop current if any
-            spawnBlockToCarry(type);
-        }
-
-        function spawnBlockToCarry(type) {
-            let geometry;
+            if(carriedBlock) dropCarried();
             const size = CONFIG.blockSize;
-            if (type === 'plank') geometry = new THREE.BoxGeometry(size, size, size * 2);
-            else geometry = new THREE.BoxGeometry(size, size, size);
-
-            carriedBlock = new THREE.Mesh(geometry, materials[type]);
+            const geo = (type==='plank') ? new THREE.BoxGeometry(size, size, size*2) : new THREE.BoxGeometry(size, size, size);
+            
+            carriedBlock = new THREE.Mesh(geo, materials[type]);
             carriedBlock.castShadow = true;
-            // Transparent blocks shouldn't cast narrower shadows than they are
-            if(type !== 'glass' && type !== 'waterBlock') carriedBlock.receiveShadow = true;
+            carriedBlock.receiveShadow = true;
+            carriedBlock.userData = { type: type, r: false };
             
-            carriedBlock.userData = { type: type, isRotated: false };
-            
-            // If it's a light block, add actual light
             if(type === 'light') {
-                const bulb = new THREE.PointLight(0xffe066, 800, 400); // High intensity, medium range
-                carriedBlock.add(bulb);
+                carriedBlock.add(new THREE.PointLight(0xffaa00, 500, 300));
             }
 
             scene.add(carriedBlock);
-            
-            // Create ghost visualization
-            placementGhost = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({color: 0x00ff00, transparent: true, opacity: 0.3, wireframe: true}));
+            placementGhost = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({color:0x00ff00, wireframe:true, opacity:0.5, transparent:true}));
             scene.add(placementGhost);
-
-            updateCursorIcon(true);
+            
+            updateCursor(true);
         }
 
-
-        // 2. Pointer Down Handler (The core logic switch)
-        function onPointerDown(event) {
-            // Ignore right clicks or UI clicks
-            if (event.button !== 0 || event.target.closest('#ui-layer button') || event.target.closest('.slot')) return;
-
-            updatePointer(event);
+        function onPointerDown(e) {
+            if(e.button !== 0 || e.target.closest('#ui-layer button') || e.target.closest('.slot')) return;
+            
+            updatePointer(e);
             raycaster.setFromCamera(pointer, camera);
 
-            if (carriedBlock) {
-                // --- ACTION: PLACE BLOCK ---
-                // Raycast against collision objects to find placement spot
+            if(carriedBlock) {
+                // Place
                 const intersects = raycaster.intersectObjects(collisionObjects, false);
-                if (intersects.length > 0) {
-                    // Finalize position based on ghost
+                if(intersects.length > 0) {
                     carriedBlock.position.copy(placementGhost.position);
-                    
-                    // Add to world data
                     currentInteractables.push(carriedBlock);
                     collisionObjects.push(carriedBlock);
-                    
-                    // Cleanup state
                     carriedBlock = null;
                     scene.remove(placementGhost);
                     placementGhost = null;
-                    updateCursorIcon(false);
+                    updateCursor(false);
                 }
             } else {
-                // --- ACTION: PICK UP BLOCK ---
+                // Pick Up
                 const intersects = raycaster.intersectObjects(currentInteractables, false);
-                if (intersects.length > 0) {
+                if(intersects.length > 0) {
                     const target = intersects[0].object;
-                    pickUpBlock(target);
+                    carriedBlock = target;
+                    currentInteractables = currentInteractables.filter(o => o !== target);
+                    collisionObjects = collisionObjects.filter(o => o !== target);
+                    
+                    placementGhost = new THREE.Mesh(target.geometry, new THREE.MeshBasicMaterial({color:0x00ff00, wireframe:true}));
+                    placementGhost.userData.r = target.userData.r;
+                    scene.add(placementGhost);
+                    updateCursor(true);
                 }
             }
         }
 
-
-        function pickUpBlock(block) {
-            carriedBlock = block;
-            // Remove from collision lists while carrying
-            currentInteractables = currentInteractables.filter(o => o !== block);
-            collisionObjects = collisionObjects.filter(o => o !== block);
-            
-            // Create ghost for re-placement
-            placementGhost = new THREE.Mesh(block.geometry, new THREE.MeshBasicMaterial({color: 0x00ff00, transparent: true, opacity: 0.3, wireframe: true}));
-            placementGhost.userData.isRotated = block.userData.isRotated;
-            scene.add(placementGhost);
-            updateCursorIcon(true);
-        }
-
-        // 3. Movement Handler (Moving the carried block/ghost)
-        function onPointerMove(event) {
-            if (!carriedBlock) return;
-            updatePointer(event);
+        function onPointerMove(e) {
+            if(!carriedBlock) return;
+            updatePointer(e);
             raycaster.setFromCamera(pointer, camera);
-            
-            // Find surface to place on
             const intersects = raycaster.intersectObjects(collisionObjects, false);
             
-            if (intersects.length > 0) {
-                const intersect = intersects[0];
-                const n = intersect.face.normal;
+            if(intersects.length > 0) {
+                const hit = intersects[0];
                 const size = CONFIG.blockSize;
-
-                // Calculate snapped position
-                const targetPos = new THREE.Vector3().copy(intersect.point).add(n.clone().multiplyScalar(size * 0.5));
-                targetPos.divideScalar(size).floor().multiplyScalar(size).addScalar(size / 2);
+                const pos = new THREE.Vector3().copy(hit.point).add(hit.face.normal.multiplyScalar(size/2));
+                pos.divideScalar(size).floor().multiplyScalar(size).addScalar(size/2);
                 
-                // Update Ghost Position
-                placementGhost.position.copy(targetPos);
+                placementGhost.position.copy(pos);
                 
-                // Handle Beam Rotation offsets
-                if (carriedBlock.userData.type === 'plank') {
-                    const offset = size / 2;
-                    if (!placementGhost.userData.isRotated) { // Long Z
-                        if ( Math.round(placementGhost.position.z / offset) % 2 !== 0 ) placementGhost.position.z += offset;
-                    } else { // Long X
-                        if ( Math.round(placementGhost.position.x / offset) % 2 !== 0 ) placementGhost.position.x += offset;
-                    }
+                // Alignment for beams
+                if(carriedBlock.userData.type === 'plank') {
+                     const off = size/2;
+                     if(!placementGhost.userData.r) { if(Math.round(pos.z/off)%2 !== 0) placementGhost.position.z += off; }
+                     else { if(Math.round(pos.x/off)%2 !== 0) placementGhost.position.x += off; }
                 }
-
-                // Move actual block way above so it doesn't interfere visually but is ready
-                carriedBlock.position.set(0, 5000, 0); 
+                carriedBlock.position.set(0, 5000, 0); // Hide carrying block
             }
         }
-
-        function updatePointer(event) {
-            pointer.set((event.clientX / window.innerWidth) * 2 - 1, -(event.clientY / window.innerHeight) * 2 + 1);
-        }
-
 
         function onKeyDown(e) {
-            // R to Rotate
             if((e.key === 'r' || e.key === 'R') && carriedBlock && carriedBlock.userData.type === 'plank') {
-                rotateCarried();
+                const r = !carriedBlock.userData.r;
+                carriedBlock.userData.r = r;
+                placementGhost.userData.r = r;
+                const size = CONFIG.blockSize;
+                const g = r ? new THREE.BoxGeometry(size*2, size, size) : new THREE.BoxGeometry(size, size, size*2);
+                carriedBlock.geometry.dispose(); carriedBlock.geometry = g;
+                placementGhost.geometry.dispose(); placementGhost.geometry = g;
             }
-            // ESC to Cancel
-            if(e.key === 'Escape' && carriedBlock) {
-                dropCarriedBlock();
-            }
+            if(e.key === 'Escape' && carriedBlock) dropCarried();
         }
 
-        function rotateCarried() {
-            const isRotated = !carriedBlock.userData.isRotated;
-            carriedBlock.userData.isRotated = isRotated;
-            placementGhost.userData.isRotated = isRotated;
-            const size = CONFIG.blockSize;
-            const newGeo = isRotated ? new THREE.BoxGeometry(size * 2, size, size) : new THREE.BoxGeometry(size, size, size * 2);
-            carriedBlock.geometry.dispose(); carriedBlock.geometry = newGeo;
-            placementGhost.geometry.dispose(); placementGhost.geometry = newGeo;
+        function dropCarried() {
+            if(carriedBlock) scene.remove(carriedBlock);
+            if(placementGhost) scene.remove(placementGhost);
+            carriedBlock = null; placementGhost = null;
+            updateCursor(false);
         }
         
-        // Just delete the currently carried block
-        function dropCarriedBlock() {
-             if(!carriedBlock) return;
-             scene.remove(carriedBlock);
-             if(placementGhost) scene.remove(placementGhost);
-             carriedBlock = null;
-             placementGhost = null;
-             updateCursorIcon(false);
-        }
-
-        // Update UI Cursor
-        function updateCursorIcon(isCarrying) {
-            const cursor = document.getElementById('carrying-cursor');
-            cursor.style.display = isCarrying ? 'block' : 'none';
-            if(isCarrying) {
-                 document.body.style.cursor = 'grabbing';
-                 // Simple cursor follower
-                 const track = (e) => { cursor.style.left = e.clientX + 15 + 'px'; cursor.style.top = e.clientY + 15 + 'px'; }
-                 document.addEventListener('pointermove', track, {once: !isCarrying});
-            } else {
-                 document.body.style.cursor = 'default';
+        function updatePointer(e) { pointer.set((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1); }
+        function updateCursor(active) {
+            const c = document.getElementById('carrying-cursor');
+            c.style.display = active ? 'block' : 'none';
+            document.body.style.cursor = active ? 'grabbing' : 'default';
+            if(active) {
+                const track = (e) => { c.style.left = e.clientX+15+'px'; c.style.top = e.clientY+15+'px'; };
+                document.addEventListener('pointermove', track, {once: !active});
             }
         }
 
-        // --- WORLD MANAGEMENT ---
+        // --- Multi-World Logic ---
 
-        function switchWorld(newIndex) {
-            if(currentWorldIdx === newIndex && currentInteractables.length > 0) return; // Already here
+        function saveCurrentWorldState() {
+            if(currentWorldId === null) return;
+            const worldObj = worlds.find(w => w.id === currentWorldId);
+            if(worldObj) {
+                worldObj.data = currentInteractables.map(b => ({
+                    type: b.userData.type, x: b.position.x, y: b.position.y, z: b.position.z, r: b.userData.r
+                }));
+            }
+        }
 
-            // 1. Save current state to memory array
-            worlds[currentWorldIdx].data = currentInteractables.map(b => ({
-                type: b.userData.type,
-                x: b.position.x, y: b.position.y, z: b.position.z,
-                r: b.userData.isRotated
-            }));
+        function createNewWorld() {
+            if(worlds.length >= CONFIG.maxWorlds) return alert("Max 10 worlds allowed!");
+            const newWorld = { id: worldCounter++, data: [] };
+            worlds.push(newWorld);
+            renderTabs();
+            switchWorld(newWorld.id);
+        }
 
-            // 2. Clear Scene
-            dropCarriedBlock();
+        function deleteWorld(id, e) {
+            e.stopPropagation();
+            if(worlds.length <= 1) return alert("Cannot delete the last world.");
+            if(!confirm("Delete this world?")) return;
+            
+            const idx = worlds.findIndex(w => w.id === id);
+            worlds.splice(idx, 1);
+            
+            // If we deleted the active world, switch to the first available
+            if(currentWorldId === id) {
+                currentInteractables.forEach(o => scene.remove(o)); // Clear visuals
+                currentInteractables = [];
+                switchWorld(worlds[0].id);
+            } else {
+                renderTabs();
+            }
+        }
+
+        function switchWorld(id) {
+            if(currentWorldId === id) return;
+            saveCurrentWorldState();
+            
+            // Clear Scene
+            dropCarried();
             currentInteractables.forEach(o => scene.remove(o));
             currentInteractables = [];
-            collisionObjects = [groundPlane]; // Reset collisions to just ground
+            collisionObjects = [groundPlane];
 
-            // 3. Load new state
-            currentWorldIdx = newIndex;
-            const newData = worlds[newIndex].data || [];
-            newData.forEach(blockData => reconstructBlock(blockData));
+            currentWorldId = id;
+            
+            // Load New
+            const worldObj = worlds.find(w => w.id === id);
+            worldObj.data.forEach(d => {
+                let g; const s = CONFIG.blockSize;
+                if(d.type === 'plank') g = d.r ? new THREE.BoxGeometry(s*2, s, s) : new THREE.BoxGeometry(s, s, s*2);
+                else g = new THREE.BoxGeometry(s, s, s);
+                
+                const b = new THREE.Mesh(g, materials[d.type]);
+                b.position.set(d.x, d.y, d.z);
+                b.castShadow = true; b.receiveShadow = true;
+                b.userData = { type: d.type, r: d.r };
+                if(d.type==='light') b.add(new THREE.PointLight(0xffaa00, 500, 300));
+                
+                scene.add(b);
+                currentInteractables.push(b);
+                collisionObjects.push(b);
+            });
 
-            // 4. Update UI
-            document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === newIndex));
+            renderTabs();
         }
 
-        // Helper to rebuild a block from data
-        function reconstructBlock(bData) {
-            let geometry; const size = CONFIG.blockSize;
-            if (bData.type === 'plank') geometry = bData.r ? new THREE.BoxGeometry(size*2, size, size) : new THREE.BoxGeometry(size, size, size*2);
-            else geometry = new THREE.BoxGeometry(size, size, size);
-
-            const block = new THREE.Mesh(geometry, materials[bData.type]);
-            block.position.set(bData.x, bData.y, bData.z);
-            block.castShadow = true;
-            if(bData.type !== 'glass' && bData.type !== 'waterBlock') block.receiveShadow = true;
-            block.userData = { type: bData.type, isRotated: bData.r };
-
-            if(bData.type === 'light') {
-                 const bulb = new THREE.PointLight(0xffe066, 800, 400);
-                 block.add(bulb);
-            }
-            scene.add(block);
-            currentInteractables.push(block);
-            collisionObjects.push(block);
+        function renderTabs() {
+            const container = document.getElementById('tab-container');
+            const addBtn = document.getElementById('add-tab-btn');
+            container.innerHTML = ''; // clear
+            
+            worlds.forEach(w => {
+                const btn = document.createElement('div');
+                btn.className = `world-tab ${w.id === currentWorldId ? 'active' : ''}`;
+                btn.onclick = () => switchWorld(w.id);
+                btn.innerHTML = `World ${w.id} <span class="del-tab" onclick="deleteWorld(${w.id}, event)">×</span>`;
+                container.appendChild(btn);
+            });
+            container.appendChild(addBtn);
         }
 
-        function clearCurrentWorld() {
-            if(confirm("Delete everything in this world tab?")) {
-                dropCarriedBlock();
-                currentInteractables.forEach(o => scene.remove(o));
-                currentInteractables = [];
-                collisionObjects = [groundPlane];
-                worlds[currentWorldIdx].data = [];
-            }
-        }
-        
         function downloadWorld() {
-            // Save current state first to ensure up to date
-            worlds[currentWorldIdx].data = currentInteractables.map(b => ({
-                type: b.userData.type, x: b.position.x, y: b.position.y, z: b.position.z, r: b.userData.isRotated
-            }));
-            const dataStr = JSON.stringify(worlds[currentWorldIdx].data);
-            const blob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
+            saveCurrentWorldState();
+            const worldObj = worlds.find(w => w.id === currentWorldId);
+            const blob = new Blob([JSON.stringify(worldObj.data)], {type: 'application/json'});
             const a = document.createElement('a');
-            a.href = url; a.download = `voxel-world-${currentWorldIdx === 0 ? 'alpha' : 'beta'}.json`;
-            a.click(); URL.revokeObjectURL(url);
+            a.href = URL.createObjectURL(blob);
+            a.download = `voxel_world_${worldObj.id}.json`;
+            a.click();
         }
 
-        function handleFileLoad(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
+        function handleFileLoad(e) {
+            const f = e.target.files[0];
+            if(!f) return;
+            const r = new FileReader();
+            r.onload = (evt) => {
                 try {
-                    const data = JSON.parse(e.target.result);
-                    // Clear and load into current tab
-                    dropCarriedBlock();
+                    const data = JSON.parse(evt.target.result);
+                    dropCarried();
                     currentInteractables.forEach(o => scene.remove(o));
                     currentInteractables = [];
                     collisionObjects = [groundPlane];
-                    data.forEach(bData => reconstructBlock(bData));
-                } catch (err) { alert("Failed to load file."); }
+                    // Load straight into current world
+                    data.forEach(d => {
+                        let g; const s = CONFIG.blockSize;
+                        if(d.type === 'plank') g = d.r ? new THREE.BoxGeometry(s*2, s, s) : new THREE.BoxGeometry(s, s, s*2);
+                        else g = new THREE.BoxGeometry(s, s, s);
+                        const b = new THREE.Mesh(g, materials[d.type]);
+                        b.position.set(d.x, d.y, d.z);
+                        b.castShadow = true; b.receiveShadow = true;
+                        b.userData = {type:d.type, r:d.r};
+                        if(d.type==='light') b.add(new THREE.PointLight(0xffaa00, 500, 300));
+                        scene.add(b);
+                        currentInteractables.push(b);
+                        collisionObjects.push(b);
+                    });
+                } catch(err) { alert("Invalid file"); }
             };
-            reader.readAsText(file);
-            event.target.value = '';
+            r.readAsText(f);
+            e.target.value = '';
         }
-
 
         function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
@@ -757,24 +635,9 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        function animate(time) {
+        function animate() {
             requestAnimationFrame(animate);
             controls.update();
-
-            // Animate realistic water bump map
-            if (materials['realisticWater'].bumpMap) {
-                materials['realisticWater'].bumpMap.offset.x = time * 0.0001;
-                materials['realisticWater'].bumpMap.offset.y = time * 0.0002;
-            }
-            
-            // Gentle floating for placement ghost if active
-            if(placementGhost) {
-                placementGhost.position.y += Math.sin(time * 0.005) * 0.5;
-                if(placementGhost.userData.isRotated !== carriedBlock.userData.isRotated) {
-                      rotateCarried(); //Sync rotation state if it got out of sync
-                }
-            }
-            
             renderer.render(scene, camera);
         }
     </script>
