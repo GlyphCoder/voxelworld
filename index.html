@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Voxel Builder - Island Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap');
+
+        body { margin: 0; overflow: hidden; font-family: 'Fredoka', sans-serif; user-select: none; background: #333; }
+        
+        /* UI Overlay */
+        #ui-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+        }
+
+        /* Hotbar */
+        #hotbar {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(5px);
+            padding: 10px;
+            border-radius: 16px;
+            display: flex;
+            gap: 12px;
+            border: 2px solid rgba(255,255,255,0.5);
+            pointer-events: auto;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            transition: bottom 0.3s;
+        }
+
+        .slot {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background-size: cover;
+            position: relative;
+            background-color: #444;
+            border: 3px solid #555;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .slot:hover { transform: scale(1.15) translateY(-5px); border-color: #fff; z-index: 10; }
+        .slot:active { transform: scale(0.95); }
+        
+        .slot span {
+            position: absolute;
+            bottom: -20px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .slot:hover span { opacity: 1; }
+
+        /* Color indicators for slots */
+        .slot.grass { background: #58a04c; }
+        .slot.stone { background: #7d7d7d; }
+        .slot.wood  { background: #8b5a2b; }
+        .slot.brick { background: #a04c4c; }
+        .slot.glass { background: #aed9e0; }
+        .slot.plank { background: #d2a679; }
+
+        /* Controls Area */
+        #top-bar {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            gap: 10px;
+            pointer-events: auto;
+        }
+
+        button.btn {
+            background: #fff;
+            color: #333;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 4px 0 #ccc, 0 5px 10px rgba(0,0,0,0.2);
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        button.btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #ccc, inset 0 2px 5px rgba(0,0,0,0.1);
+        }
+        button.btn.primary { background: #4CAF50; color: white; box-shadow: 0 4px 0 #2E7D32, 0 5px 10px rgba(0,0,0,0.2); }
+        button.btn.danger { background: #FF5252; color: white; box-shadow: 0 4px 0 #D32F2F, 0 5px 10px rgba(0,0,0,0.2); }
+
+        /* Instructions */
+        #instructions {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.5);
+            padding: 15px;
+            border-radius: 12px;
+            color: white;
+            font-size: 13px;
+            line-height: 1.6;
+            backdrop-filter: blur(4px);
+        }
+
+        /* Trash Bin */
+        #trash {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 69, 58, 0.2);
+            border: 3px dashed #ff453a;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ff453a;
+            font-weight: bold;
+            font-size: 12px;
+            text-align: center;
+            pointer-events: none; /* Logic handled via raycast */
+            transition: all 0.2s;
+        }
+        #trash.hover { 
+            background: rgba(255, 69, 58, 0.8); 
+            color: white; 
+            border-style: solid; 
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        /* Hidden File Input */
+        #fileInput { display: none; }
+
+    </style>
+</head>
+<body>
+
+    <div id="ui-layer">
+        <div id="top-bar">
+            <button class="btn primary" onclick="downloadWorld()">💾 SAVE FILE</button>
+            <button class="btn" onclick="triggerLoad()">📂 LOAD FILE</button>
+            <button class="btn danger" onclick="clearWorld()">🗑️ CLEAR</button>
+        </div>
+
+        <div id="instructions">
+            🖱️ <b>Right Click + Drag</b>: Rotate Camera<br>
+            🖱️ <b>Left Click + Drag</b>: Move Blocks<br>
+            🗑️ <b>Drop in Red Zone</b>: Delete Block<br>
+            ⌨️ <b>Press 'R'</b>: Rotate Beams
+        </div>
+
+        <div id="trash">DRAG HERE<br>TO DELETE</div>
+
+        <div id="hotbar">
+            <div class="slot grass" onclick="spawnBlock('grass')"><span>Grass</span></div>
+            <div class="slot stone" onclick="spawnBlock('stone')"><span>Stone</span></div>
+            <div class="slot wood" onclick="spawnBlock('wood')"><span>Log</span></div>
+            <div class="slot brick" onclick="spawnBlock('brick')"><span>Brick</span></div>
+            <div class="slot glass" onclick="spawnBlock('glass')"><span>Glass</span></div>
+            <div class="slot plank" onclick="spawnBlock('plank')"><span>Beam</span></div>
+        </div>
+    </div>
+
+    <input type="file" id="fileInput" accept=".json">
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- Configuration ---
+        const CONFIG = {
+            blockSize: 50,
+            islandSize: 18, // In blocks
+            waterColor: 0x4fa4b8,
+            skyColor: 0xa8d9ef
+        };
+
+        let camera, scene, renderer, controls;
+        let groundPlane, waterMesh;
+        let raycaster, pointer;
+        
+        // Arrays
+        let interactableObjects = []; // Things we can drag
+        let obstacleObjects = []; // Ground and other blocks (for stacking)
+        
+        // State
+        let selectedBlock = null; 
+        let isDragging = false;
+        const materials = {};
+
+        init();
+        animate();
+
+        // Expose to HTML
+        window.spawnBlock = spawnBlock;
+        window.downloadWorld = downloadWorld;
+        window.triggerLoad = () => document.getElementById('fileInput').click();
+        window.clearWorld = clearWorld;
+
+        // File Input Listener
+        document.getElementById('fileInput').addEventListener('change', handleFileLoad, false);
+
+        function init() {
+            // 1. Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(CONFIG.skyColor);
+            scene.fog = new THREE.Fog(CONFIG.skyColor, 500, 2500);
+
+            // 2. Camera
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 5000);
+            camera.position.set(900, 800, 900);
+
+            // 3. Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.body.appendChild(renderer.domElement);
+
+            // 4. Lights
+            const ambient = new THREE.AmbientLight(0xffffff, 0.65);
+            scene.add(ambient);
+
+            const sun = new THREE.DirectionalLight(0xfff5e1, 1.2);
+            sun.position.set(500, 1000, 500);
+            sun.castShadow = true;
+            sun.shadow.mapSize.width = 2048;
+            sun.shadow.mapSize.height = 2048;
+            sun.shadow.camera.near = 0.5;
+            sun.shadow.camera.far = 3000;
+            const d = 1000;
+            sun.shadow.camera.left = -d;
+            sun.shadow.camera.right = d;
+            sun.shadow.camera.top = d;
+            sun.shadow.camera.bottom = -d;
+            scene.add(sun);
+
+            // 5. Materials
+            generateMaterials();
+
+            // 6. Environment Generation
+            createEnvironment();
+
+            // 7. Controls
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 - 0.1; // Don't go under ground
+            controls.minDistance = 200;
+            controls.maxDistance = 2000;
+            controls.mouseButtons = {
+                LEFT: null, // Logic handled manually for dragging
+                MIDDLE: THREE.MOUSE.DOLLY,
+                RIGHT: THREE.MOUSE.ROTATE 
+            };
+
+            // 8. Interaction
+            raycaster = new THREE.Raycaster();
+            pointer = new THREE.Vector2();
+
+            window.addEventListener('resize', onWindowResize);
+            document.addEventListener('pointerdown', onPointerDown);
+            document.addEventListener('pointermove', onPointerMove);
+            document.addEventListener('pointerup', onPointerUp);
+            document.addEventListener('keydown', (e) => { 
+                if((e.key === 'r' || e.key === 'R') && selectedBlock) rotateSelection(); 
+            });
+        }
+
+        // --- ENVIRONMENT GEN ---
+        function createEnvironment() {
+            // A. The Water
+            const waterGeo = new THREE.PlaneGeometry(5000, 5000);
+            waterGeo.rotateX(-Math.PI / 2);
+            const waterTex = materials['water'].map;
+            waterTex.wrapS = THREE.RepeatWrapping;
+            waterTex.wrapT = THREE.RepeatWrapping;
+            waterTex.repeat.set(20, 20);
+            
+            waterMesh = new THREE.Mesh(waterGeo, materials['water']);
+            waterMesh.position.y = -20;
+            scene.add(waterMesh);
+
+            // B. The Island Base (Grass Platform)
+            const size = CONFIG.blockSize * CONFIG.islandSize;
+            const islandGeo = new THREE.BoxGeometry(size, CONFIG.blockSize, size);
+            const islandMat = materials['grass']; // Use grass block material array
+            groundPlane = new THREE.Mesh(islandGeo, islandMat);
+            groundPlane.position.y = -CONFIG.blockSize / 2; // Surface is at y=0
+            groundPlane.receiveShadow = true;
+            scene.add(groundPlane);
+            obstacleObjects.push(groundPlane); // We can place blocks on it
+
+            // C. Decorative Surroundings (Trees & Rocks)
+            generateNature(size);
+        }
+
+        function generateNature(islandWidth) {
+            // Place random nature items OUTSIDE the island width
+            const count = 40;
+            const minDist = islandWidth / 2 + 60;
+            const maxDist = islandWidth / 2 + 600;
+
+            const trunkGeo = new THREE.BoxGeometry(30, 60, 30);
+            const leaveGeo = new THREE.BoxGeometry(70, 70, 70);
+            
+            for(let i=0; i<count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const dist = minDist + Math.random() * (maxDist - minDist);
+                const x = Math.cos(angle) * dist;
+                const z = Math.sin(angle) * dist;
+
+                // Create Tree
+                const trunk = new THREE.Mesh(trunkGeo, materials['wood']);
+                trunk.position.set(x, 10, z); // Float slightly in water
+                trunk.castShadow = true;
+                
+                const leaves = new THREE.Mesh(leaveGeo, materials['leaves']);
+                leaves.position.set(0, 50, 0);
+                leaves.castShadow = true;
+                trunk.add(leaves);
+
+                // Bobbing animation offset
+                trunk.userData = { 
+                    bobOffset: Math.random() * 100,
+                    baseY: 10
+                };
+                
+                scene.add(trunk);
+                
+                // Add to a decorative list if we wanted to animate them
+                // For now, let's animate in the main loop
+                trunk.name = "nature_asset";
+            }
+        }
+
+        // --- TEXTURE SYSTEM ---
+        function createPixelTexture(color, noise = 0.1) {
+            const size = 64;
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = color;
+            ctx.fillRect(0,0,size,size);
+            
+            // Noise
+            for(let i=0; i<300; i++) {
+                const x = Math.floor(Math.random()*size);
+                const y = Math.floor(Math.random()*size);
+                const amt = (Math.random() - 0.5) * noise;
+                ctx.fillStyle = amt > 0 ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+                ctx.fillRect(x,y,4,4);
+            }
+            
+            // Border
+            ctx.strokeStyle = "rgba(0,0,0,0.15)";
+            ctx.lineWidth = 4;
+            ctx.strokeRect(0,0,size,size);
+
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.magFilter = THREE.NearestFilter;
+            return tex;
+        }
+
+        function generateMaterials() {
+            const mkMat = (col) => new THREE.MeshLambertMaterial({ map: createPixelTexture(col) });
+            
+            materials['stone'] = mkMat('#919191');
+            materials['wood'] = mkMat('#6d4c41');
+            materials['brick'] = mkMat('#c65d57');
+            materials['plank'] = mkMat('#e0c097');
+            materials['leaves'] = mkMat('#43a047');
+            
+            materials['glass'] = new THREE.MeshLambertMaterial({ 
+                color: 0xaed9e0, 
+                transparent: true, 
+                opacity: 0.6,
+                map: createPixelTexture('#aed9e0', 0.05)
+            });
+
+            // Grass Block (Multi-material)
+            const dirtTex = createPixelTexture('#5d4037');
+            const grassTopTex = createPixelTexture('#66bb6a');
+            const grassMat = [
+                new THREE.MeshLambertMaterial({ map: dirtTex }), // Rx
+                new THREE.MeshLambertMaterial({ map: dirtTex }), // Lx
+                new THREE.MeshLambertMaterial({ map: grassTopTex }), // Top
+                new THREE.MeshLambertMaterial({ map: dirtTex }), // Bot
+                new THREE.MeshLambertMaterial({ map: dirtTex }), // Fz
+                new THREE.MeshLambertMaterial({ map: dirtTex })  // Bz
+            ];
+            materials['grass'] = grassMat;
+
+            // Water
+            const waterTex = createPixelTexture('#29b6f6', 0.05);
+            materials['water'] = new THREE.MeshLambertMaterial({ 
+                map: waterTex, 
+                transparent: true, 
+                opacity: 0.8,
+                color: 0x22aaff 
+            });
+        }
+
+        // --- GAME LOGIC ---
+
+        function spawnBlock(type) {
+            let geometry;
+            const size = CONFIG.blockSize;
+
+            if (type === 'plank') {
+                geometry = new THREE.BoxGeometry(size, size, size * 2);
+            } else {
+                geometry = new THREE.BoxGeometry(size, size, size);
+            }
+
+            const mat = materials[type];
+            const block = new THREE.Mesh(geometry, mat);
+            
+            // Spawn above center
+            block.position.set(0, 300, 0);
+            block.castShadow = true;
+            block.receiveShadow = true;
+            
+            block.userData = { type: type, isRotated: false };
+            
+            scene.add(block);
+            interactableObjects.push(block);
+            obstacleObjects.push(block);
+        }
+
+        function rotateSelection() {
+            // Only for plank/beams
+            if (selectedBlock.userData.type !== 'plank') return;
+
+            const isRotated = !selectedBlock.userData.isRotated;
+            selectedBlock.userData.isRotated = isRotated;
+            const size = CONFIG.blockSize;
+
+            const newGeo = isRotated 
+                ? new THREE.BoxGeometry(size * 2, size, size) 
+                : new THREE.BoxGeometry(size, size, size * 2);
+            
+            selectedBlock.geometry.dispose();
+            selectedBlock.geometry = newGeo;
+        }
+
+        function onPointerDown(event) {
+            if (event.button !== 0 || event.target.closest('#ui-layer button') || event.target.closest('.slot')) return;
+
+            pointer.set(
+                (event.clientX / window.innerWidth) * 2 - 1,
+                -(event.clientY / window.innerHeight) * 2 + 1
+            );
+
+            raycaster.setFromCamera(pointer, camera);
+            const intersects = raycaster.intersectObjects(interactableObjects, false);
+
+            if (intersects.length > 0) {
+                isDragging = true;
+                selectedBlock = intersects[0].object;
+                controls.enabled = false;
+                
+                // Highlight effect
+                const mat = Array.isArray(selectedBlock.material) ? selectedBlock.material : [selectedBlock.material];
+                mat.forEach(m => m.emissive.setHex(0x555555));
+            }
+        }
+
+        function onPointerMove(event) {
+            // Handle visual trash bin interaction
+            const trashBin = document.getElementById('trash');
+            const rect = trashBin.getBoundingClientRect();
+            const hoveringTrash = (event.clientX > rect.left && event.clientX < rect.right && 
+                                   event.clientY > rect.top && event.clientY < rect.bottom);
+            
+            if (hoveringTrash) trashBin.classList.add('hover');
+            else trashBin.classList.remove('hover');
+
+            if (!isDragging || !selectedBlock) return;
+
+            // Logic to move block
+            pointer.set(
+                (event.clientX / window.innerWidth) * 2 - 1,
+                -(event.clientY / window.innerHeight) * 2 + 1
+            );
+
+            raycaster.setFromCamera(pointer, camera);
+            
+            // Intersect with everything static (ground + other blocks) excluding self
+            const statics = obstacleObjects.filter(obj => obj !== selectedBlock);
+            const intersects = raycaster.intersectObjects(statics, false);
+
+            if (intersects.length > 0) {
+                const intersect = intersects[0];
+                const n = intersect.face.normal;
+                
+                // Calculate position based on grid
+                const targetPos = new THREE.Vector3().copy(intersect.point).add(n.multiplyScalar(CONFIG.blockSize * 0.5));
+                
+                // Snap to grid
+                targetPos.divideScalar(CONFIG.blockSize).floor().multiplyScalar(CONFIG.blockSize).addScalar(CONFIG.blockSize / 2);
+                
+                selectedBlock.position.copy(targetPos);
+
+                // Handle Cuboid Alignment (2x1 blocks)
+                if (selectedBlock.userData.type === 'plank') {
+                     const offset = CONFIG.blockSize / 2;
+                     if (!selectedBlock.userData.isRotated) {
+                         // Long on Z
+                         if ( (selectedBlock.position.z / offset) % 2 !== 0 ) selectedBlock.position.z += offset;
+                     } else {
+                         // Long on X
+                         if ( (selectedBlock.position.x / offset) % 2 !== 0 ) selectedBlock.position.x += offset;
+                     }
+                }
+            }
+        }
+
+        function onPointerUp() {
+            const trashBin = document.getElementById('trash');
+
+            if (isDragging && selectedBlock) {
+                // Remove highlight
+                const mat = Array.isArray(selectedBlock.material) ? selectedBlock.material : [selectedBlock.material];
+                mat.forEach(m => m.emissive.setHex(0x000000));
+
+                // Delete if in trash
+                if (trashBin.classList.contains('hover')) {
+                    scene.remove(selectedBlock);
+                    interactableObjects = interactableObjects.filter(o => o !== selectedBlock);
+                    obstacleObjects = obstacleObjects.filter(o => o !== selectedBlock);
+                }
+            }
+
+            isDragging = false;
+            selectedBlock = null;
+            controls.enabled = true;
+            trashBin.classList.remove('hover');
+        }
+
+        // --- I/O SYSTEMS ---
+
+        function downloadWorld() {
+            const data = interactableObjects.map(b => ({
+                type: b.userData.type,
+                x: b.position.x,
+                y: b.position.y,
+                z: b.position.z,
+                r: b.userData.isRotated
+            }));
+
+            const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'my-voxel-world.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function handleFileLoad(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    clearWorld(); // Clear existing
+                    
+                    data.forEach(b => {
+                        spawnBlock(b.type);
+                        // Get the block we just added (last in array)
+                        const newBlock = interactableObjects[interactableObjects.length - 1];
+                        newBlock.position.set(b.x, b.y, b.z);
+                        
+                        // Handle rotation
+                        if (b.r) {
+                            selectedBlock = newBlock; 
+                            rotateSelection();
+                            selectedBlock = null;
+                        }
+                    });
+                } catch (err) {
+                    alert("Error loading file: " + err);
+                }
+            };
+            reader.readAsText(file);
+            // Reset input so we can load same file again if needed
+            event.target.value = ''; 
+        }
+
+        function clearWorld() {
+            // Remove all interactables
+            interactableObjects.forEach(o => scene.remove(o));
+            interactableObjects = [];
+            // Reset obstacles to just the ground
+            obstacleObjects = [groundPlane];
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- ANIMATION ---
+        function animate(time) {
+            requestAnimationFrame(animate);
+            controls.update();
+
+            // Animate Water
+            if(waterMesh) {
+                waterMesh.material.map.offset.y += 0.001;
+                waterMesh.material.map.offset.x += 0.0005;
+            }
+
+            // Animate Nature (Bobbing)
+            scene.traverse((obj) => {
+                if(obj.name === 'nature_asset') {
+                    obj.position.y = obj.userData.baseY + Math.sin(time * 0.002 + obj.userData.bobOffset) * 2;
+                }
+            });
+
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
