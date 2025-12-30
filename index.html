@@ -2,18 +2,50 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Voxel Builder - Island Edition</title>
+    <title>Voxel Builder - Ultimate Edition</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap');
 
-        body { margin: 0; overflow: hidden; font-family: 'Fredoka', sans-serif; user-select: none; background: #333; }
+        body { margin: 0; overflow: hidden; font-family: 'Fredoka', sans-serif; user-select: none; background: #1a1a2e; }
         
         /* UI Overlay */
         #ui-layer {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none;
+            z-index: 10;
         }
+
+        /* World Tabs */
+        #world-tabs {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            background: rgba(0,0,0,0.5);
+            border-radius: 30px;
+            overflow: hidden;
+            pointer-events: auto;
+            backdrop-filter: blur(5px);
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+        .tab {
+            padding: 12px 30px;
+            cursor: pointer;
+            color: rgba(255,255,255,0.6);
+            font-weight: 600;
+            transition: all 0.3s;
+            background: transparent;
+            border: none;
+            font-family: inherit;
+            font-size: 16px;
+        }
+        .tab.active {
+            background: rgba(79, 164, 184, 0.8);
+            color: white;
+        }
+        .tab:hover:not(.active) { color: white; background: rgba(255,255,255,0.1); }
 
         /* Hotbar */
         #hotbar {
@@ -21,158 +53,139 @@
             bottom: 30px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(5px);
-            padding: 10px;
-            border-radius: 16px;
+            background: rgba(28, 28, 45, 0.7);
+            backdrop-filter: blur(10px);
+            padding: 12px;
+            border-radius: 20px;
             display: flex;
             gap: 12px;
-            border: 2px solid rgba(255,255,255,0.5);
+            border: 3px solid rgba(255,255,255,0.3);
             pointer-events: auto;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-            transition: bottom 0.3s;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
         }
 
         .slot {
-            width: 60px;
-            height: 60px;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            background-size: cover;
+            width: 64px; height: 64px;
+            border-radius: 16px; cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
             position: relative;
             background-color: #444;
             border: 3px solid #555;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.3);
+            display: flex; justify-content: center; align-items: center;
+            font-size: 32px; /* Emoji icon size */
         }
 
-        .slot:hover { transform: scale(1.15) translateY(-5px); border-color: #fff; z-index: 10; }
+        .slot:hover { transform: scale(1.1) translateY(-10px); border-color: #fff; z-index: 10; background-color: #666;}
         .slot:active { transform: scale(0.95); }
         
-        .slot span {
+        /* Styled Tooltips */
+        .slot::after {
+            content: attr(data-label);
             position: absolute;
-            bottom: -20px;
-            width: 100%;
-            text-align: center;
+            bottom: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
             color: white;
+            padding: 6px 12px;
+            border-radius: 8px;
             font-size: 12px;
-            font-weight: 600;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            white-space: nowrap;
             opacity: 0;
-            transition: opacity 0.2s;
+            pointer-events: none;
+            transition: opacity 0.2s, bottom 0.2s;
         }
-        .slot:hover span { opacity: 1; }
+        .slot:hover::after { opacity: 1; bottom: -45px; }
 
-        /* Color indicators for slots */
-        .slot.grass { background: #58a04c; }
-        .slot.stone { background: #7d7d7d; }
-        .slot.wood  { background: #8b5a2b; }
-        .slot.brick { background: #a04c4c; }
-        .slot.glass { background: #aed9e0; }
-        .slot.plank { background: #d2a679; }
+        /* Slot Visuals */
+        .slot.grass { background: #58a04c; color: #2e5e26; }
+        .slot.stone { background: #8d8d8d; color: #515151; }
+        .slot.wood  { background: #74523d; color: #3e2b20; }
+        .slot.brick { background: #b95f58; color: #722f2a; }
+        .slot.glass { background: #aed9e0; color: #ffffff; border-color: #d0f0f5;}
+        .slot.plank { background: #deb887; color: #9c7c53; }
+        .slot.light { background: #fff3bb; color: #ffcc00; box-shadow: 0 0 20px #fff3bb; border-color: #ffee88;}
+        .slot.waterBlock { background: #29b6f6; color: #e3f2fd; opacity: 0.8; border-color: #81d4fa;}
 
         /* Controls Area */
-        #top-bar {
+        #side-controls {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            display: flex;
-            gap: 10px;
+            top: 100px; left: 30px;
+            display: flex; flex-direction: column; gap: 15px;
             pointer-events: auto;
         }
 
         button.btn {
-            background: #fff;
-            color: #333;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 30px;
-            cursor: pointer;
-            font-family: inherit;
-            font-weight: 600;
-            font-size: 14px;
-            box-shadow: 0 4px 0 #ccc, 0 5px 10px rgba(0,0,0,0.2);
-            transition: transform 0.1s, box-shadow 0.1s;
+            background: rgba(255,255,255,0.9); color: #333; border: none;
+            padding: 12px 24px; border-radius: 12px; cursor: pointer;
+            font-family: inherit; font-weight: 700; font-size: 14px;
+            box-shadow: 0 4px 0 #aaa, 0 8px 20px rgba(0,0,0,0.3);
+            transition: all 0.1s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
-        button.btn:active {
-            transform: translateY(4px);
-            box-shadow: 0 0 0 #ccc, inset 0 2px 5px rgba(0,0,0,0.1);
-        }
-        button.btn.primary { background: #4CAF50; color: white; box-shadow: 0 4px 0 #2E7D32, 0 5px 10px rgba(0,0,0,0.2); }
-        button.btn.danger { background: #FF5252; color: white; box-shadow: 0 4px 0 #D32F2F, 0 5px 10px rgba(0,0,0,0.2); }
+        button.btn:active { transform: translateY(4px); box-shadow: 0 0 0 #aaa, inset 0 2px 5px rgba(0,0,0,0.2); }
+        button.btn.primary { background: #4fa4b8; color: white; box-shadow: 0 4px 0 #2e6e7d, 0 8px 20px rgba(0,0,0,0.4); }
+        button.btn.danger { background: #ff5252; color: white; box-shadow: 0 4px 0 #d32f2f, 0 8px 20px rgba(0,0,0,0.4); }
 
         /* Instructions */
         #instructions {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.5);
-            padding: 15px;
-            border-radius: 12px;
-            color: white;
-            font-size: 13px;
-            line-height: 1.6;
-            backdrop-filter: blur(4px);
+            position: absolute; top: 30px; right: 30px;
+            background: rgba(0,0,0,0.6); padding: 20px;
+            border-radius: 16px; color: rgba(255,255,255,0.9);
+            font-size: 14px; line-height: 1.8;
+            backdrop-filter: blur(8px); border: 2px solid rgba(255,255,255,0.1);
+        }
+        #instructions b { color: #4fa4b8; }
+
+        /* Carrying Indicator */
+        #carrying-cursor {
+            position: fixed;
+            pointer-events: none;
+            z-index: 100;
+            display: none;
+            font-size: 24px;
+            filter: drop-shadow(0 0 10px rgba(255,255,255,0.5));
         }
 
-        /* Trash Bin */
-        #trash {
-            position: absolute;
-            bottom: 30px;
-            right: 30px;
-            width: 80px;
-            height: 80px;
-            background: rgba(255, 69, 58, 0.2);
-            border: 3px dashed #ff453a;
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #ff453a;
-            font-weight: bold;
-            font-size: 12px;
-            text-align: center;
-            pointer-events: none; /* Logic handled via raycast */
-            transition: all 0.2s;
-        }
-        #trash.hover { 
-            background: rgba(255, 69, 58, 0.8); 
-            color: white; 
-            border-style: solid; 
-            transform: scale(1.1) rotate(5deg);
-        }
-
-        /* Hidden File Input */
         #fileInput { display: none; }
-
     </style>
 </head>
 <body>
 
     <div id="ui-layer">
-        <div id="top-bar">
-            <button class="btn primary" onclick="downloadWorld()">💾 SAVE FILE</button>
-            <button class="btn" onclick="triggerLoad()">📂 LOAD FILE</button>
-            <button class="btn danger" onclick="clearWorld()">🗑️ CLEAR</button>
+        <div id="world-tabs">
+            <button class="tab active" onclick="switchWorld(0)">🗺️ World Alpha</button>
+            <button class="tab" onclick="switchWorld(1)">🏝️ World Beta</button>
+        </div>
+
+        <div id="side-controls">
+            <button class="btn primary" onclick="downloadWorld()">💾 Download</button>
+            <button class="btn" onclick="triggerLoad()">📂 Open File</button>
+            <button class="btn danger" onclick="clearCurrentWorld()">🗑️ Wipe World</button>
         </div>
 
         <div id="instructions">
-            🖱️ <b>Right Click + Drag</b>: Rotate Camera<br>
-            🖱️ <b>Left Click + Drag</b>: Move Blocks<br>
-            🗑️ <b>Drop in Red Zone</b>: Delete Block<br>
-            ⌨️ <b>Press 'R'</b>: Rotate Beams
+            <b>Left Click Block</b>: Pick Up<br>
+            <b>Left Click Empty</b>: Place<br>
+            <b>Right Click + Drag</b>: Rotate Camera<br>
+            <b>R Key</b>: Rotate Beams<br>
+            <b>Esc Key</b>: Cancel/Drop
         </div>
-
-        <div id="trash">DRAG HERE<br>TO DELETE</div>
 
         <div id="hotbar">
-            <div class="slot grass" onclick="spawnBlock('grass')"><span>Grass</span></div>
-            <div class="slot stone" onclick="spawnBlock('stone')"><span>Stone</span></div>
-            <div class="slot wood" onclick="spawnBlock('wood')"><span>Log</span></div>
-            <div class="slot brick" onclick="spawnBlock('brick')"><span>Brick</span></div>
-            <div class="slot glass" onclick="spawnBlock('glass')"><span>Glass</span></div>
-            <div class="slot plank" onclick="spawnBlock('plank')"><span>Beam</span></div>
+            <div class="slot grass" data-label="Grass" onclick="startPlacing('grass')">🌿</div>
+            <div class="slot stone" data-label="Stone" onclick="startPlacing('stone')">🪨</div>
+            <div class="slot wood" data-label="Wood Log" onclick="startPlacing('wood')">🪵</div>
+            <div class="slot plank" data-label="Beam" onclick="startPlacing('plank')">📏</div>
+            <div class="slot brick" data-label="Brick" onclick="startPlacing('brick')">🧱</div>
+            <div class="slot glass" data-label="Clear Glass" onclick="startPlacing('glass')">🔲</div>
+            <div class="slot waterBlock" data-label="Water" onclick="startPlacing('waterBlock')">💧</div>
+            <div class="slot light" data-label="Light Block" onclick="startPlacing('light')">💡</div>
         </div>
+
+        <div id="carrying-cursor">📦</div>
     </div>
 
     <input type="file" id="fileInput" accept=".json">
@@ -193,436 +206,550 @@
         // --- Configuration ---
         const CONFIG = {
             blockSize: 50,
-            islandSize: 18, // In blocks
-            waterColor: 0x4fa4b8,
-            skyColor: 0xa8d9ef
+            islandSize: 50, // Much bigger area (50x50 blocks)
+            waterLevel: -30,
+            fogColor: 0xcce0ff, // Hazy horizon color
+            sunColor: 0xfff5e1
         };
 
         let camera, scene, renderer, controls;
         let groundPlane, waterMesh;
         let raycaster, pointer;
         
-        // Arrays
-        let interactableObjects = []; // Things we can drag
-        let obstacleObjects = []; // Ground and other blocks (for stacking)
+        // World Data Management
+        let currentWorldIdx = 0;
+        const worlds = [
+            { interactables: [] }, // World Alpha Data
+            { interactables: [] }  // World Beta Data
+        ];
+
+        // Scene Objects collections (refreshed on world switch)
+        let currentInteractables = []; // Things we can pick up
+        let collisionObjects = []; // Things we can place ON (ground + interactables)
         
-        // State
-        let selectedBlock = null; 
-        let isDragging = false;
+        // Interaction State
+        let carriedBlock = null; 
+        let placementGhost = null; // Visual guide where block will land
         const materials = {};
 
         init();
         animate();
 
         // Expose to HTML
-        window.spawnBlock = spawnBlock;
+        window.startPlacing = startPlacing;
         window.downloadWorld = downloadWorld;
         window.triggerLoad = () => document.getElementById('fileInput').click();
-        window.clearWorld = clearWorld;
+        window.clearCurrentWorld = clearCurrentWorld;
+        window.switchWorld = switchWorld;
 
-        // File Input Listener
         document.getElementById('fileInput').addEventListener('change', handleFileLoad, false);
 
         function init() {
-            // 1. Scene
+            // 1. Scene & Fog
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(CONFIG.skyColor);
-            scene.fog = new THREE.Fog(CONFIG.skyColor, 500, 2500);
+            scene.background = new THREE.Color(CONFIG.fogColor);
+            // Exponential fog for smoother horizon blend
+            scene.fog = new THREE.FogExp2(CONFIG.fogColor, 0.00045);
 
             // 2. Camera
-            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 5000);
-            camera.position.set(900, 800, 900);
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 8000);
+            // Start zoomed out further for the bigger world
+            camera.position.set(1800, 1500, 1800);
 
-            // 3. Renderer
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setPixelRatio(window.devicePixelRatio);
+            // 3. Renderer (High Quality)
+            renderer = new THREE.WebGLRenderer({ antialias: true,powerPreference: "high-performance" });
+            renderer.setPixelRatio(window.devicePixelRatio); // Max resolution
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Softer shadows
+            // Need physical lighting for realistic water/glass
+            renderer.useLegacyLights = false; 
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.0;
             document.body.appendChild(renderer.domElement);
 
             // 4. Lights
-            const ambient = new THREE.AmbientLight(0xffffff, 0.65);
-            scene.add(ambient);
+            setupLighting();
 
-            const sun = new THREE.DirectionalLight(0xfff5e1, 1.2);
-            sun.position.set(500, 1000, 500);
-            sun.castShadow = true;
-            sun.shadow.mapSize.width = 2048;
-            sun.shadow.mapSize.height = 2048;
-            sun.shadow.camera.near = 0.5;
-            sun.shadow.camera.far = 3000;
-            const d = 1000;
-            sun.shadow.camera.left = -d;
-            sun.shadow.camera.right = d;
-            sun.shadow.camera.top = d;
-            sun.shadow.camera.bottom = -d;
-            scene.add(sun);
-
-            // 5. Materials
+            // 5. Materials & Environment setup
             generateMaterials();
-
-            // 6. Environment Generation
             createEnvironment();
 
-            // 7. Controls
+            // 6. Controls
             controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
-            controls.dampingFactor = 0.05;
-            controls.maxPolarAngle = Math.PI / 2 - 0.1; // Don't go under ground
-            controls.minDistance = 200;
-            controls.maxDistance = 2000;
+            controls.dampingFactor = 0.08;
+            controls.maxPolarAngle = Math.PI / 2 - 0.05; 
+            controls.minDistance = 100;
+            controls.maxDistance = 4000;
+            // Only allow right click for camera rotation
             controls.mouseButtons = {
-                LEFT: null, // Logic handled manually for dragging
+                LEFT: null, 
                 MIDDLE: THREE.MOUSE.DOLLY,
                 RIGHT: THREE.MOUSE.ROTATE 
             };
 
-            // 8. Interaction
+            // 7. Interaction Setup
             raycaster = new THREE.Raycaster();
             pointer = new THREE.Vector2();
 
             window.addEventListener('resize', onWindowResize);
             document.addEventListener('pointerdown', onPointerDown);
             document.addEventListener('pointermove', onPointerMove);
-            document.addEventListener('pointerup', onPointerUp);
-            document.addEventListener('keydown', (e) => { 
-                if((e.key === 'r' || e.key === 'R') && selectedBlock) rotateSelection(); 
-            });
+            document.addEventListener('keydown', onKeyDown);
+
+            // Initial World Load
+            switchWorld(0);
         }
 
-        // --- ENVIRONMENT GEN ---
-        function createEnvironment() {
-            // A. The Water
-            const waterGeo = new THREE.PlaneGeometry(5000, 5000);
-            waterGeo.rotateX(-Math.PI / 2);
-            const waterTex = materials['water'].map;
-            waterTex.wrapS = THREE.RepeatWrapping;
-            waterTex.wrapT = THREE.RepeatWrapping;
-            waterTex.repeat.set(20, 20);
-            
-            waterMesh = new THREE.Mesh(waterGeo, materials['water']);
-            waterMesh.position.y = -20;
-            scene.add(waterMesh);
+        // --- LIGHTING ---
+        function setupLighting() {
+            const ambient = new THREE.AmbientLight(CONFIG.fogColor, 0.4);
+            scene.add(ambient);
 
-            // B. The Island Base (Grass Platform)
-            const size = CONFIG.blockSize * CONFIG.islandSize;
-            const islandGeo = new THREE.BoxGeometry(size, CONFIG.blockSize, size);
-            const islandMat = materials['grass']; // Use grass block material array
-            groundPlane = new THREE.Mesh(islandGeo, islandMat);
-            groundPlane.position.y = -CONFIG.blockSize / 2; // Surface is at y=0
+            const sun = new THREE.DirectionalLight(CONFIG.sunColor, 2.5);
+            sun.position.set(1000, 2000, 1000);
+            sun.castShadow = true;
+            // Massive shadow map for the large area
+            sun.shadow.mapSize.width = 4096;
+            sun.shadow.mapSize.height = 4096;
+            sun.shadow.camera.near = 100;
+            sun.shadow.camera.far = 5000;
+            const d = 2500;
+            sun.shadow.camera.left = -d; sun.shadow.camera.right = d;
+            sun.shadow.camera.top = d;  sun.shadow.camera.bottom = -d;
+            sun.shadow.bias = -0.0005;
+            scene.add(sun);
+
+            // Add a subtle hemisphere light for better outdoor gradients
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+            hemiLight.position.set(0, 500, 0);
+            scene.add(hemiLight);
+        }
+
+        // --- ENVIRONMENT & SURROUNDINGS ---
+        function createEnvironment() {
+            const sizeInUnits = CONFIG.blockSize * CONFIG.islandSize;
+
+            // A. The Main Build Platform
+            const islandGeo = new THREE.BoxGeometry(sizeInUnits, CONFIG.blockSize, sizeInUnits);
+            // Make the top grass, sides dirt
+            groundPlane = new THREE.Mesh(islandGeo, materials['grass_block']);
+            groundPlane.position.y = -CONFIG.blockSize / 2; 
             groundPlane.receiveShadow = true;
             scene.add(groundPlane);
-            obstacleObjects.push(groundPlane); // We can place blocks on it
+            
+            // B. Realistic Water
+            const waterGeo = new THREE.PlaneGeometry(10000, 10000);
+            waterMesh = new THREE.Mesh(waterGeo, materials['realisticWater']);
+            waterMesh.rotation.x = -Math.PI / 2;
+            waterMesh.position.y = CONFIG.waterLevel;
+            waterMesh.receiveShadow = true;
+            scene.add(waterMesh);
 
-            // C. Decorative Surroundings (Trees & Rocks)
-            generateNature(size);
+            // C. Distant Mountains & Rocks
+            generateSurroundings(sizeInUnits);
         }
 
-        function generateNature(islandWidth) {
-            // Place random nature items OUTSIDE the island width
-            const count = 40;
-            const minDist = islandWidth / 2 + 60;
-            const maxDist = islandWidth / 2 + 600;
+        function generateSurroundings(islandWidth) {
+            // Simple low-poly mountains in the distance
+            const mtnMat = new THREE.MeshLambertMaterial({ color: 0x5a6e8c, flatShading: true });
+            const rockMat = new THREE.MeshLambertMaterial({ color: 0x7d7d7d, flatShading: true });
 
-            const trunkGeo = new THREE.BoxGeometry(30, 60, 30);
-            const leaveGeo = new THREE.BoxGeometry(70, 70, 70);
-            
-            for(let i=0; i<count; i++) {
-                const angle = Math.random() * Math.PI * 2;
-                const dist = minDist + Math.random() * (maxDist - minDist);
+            for(let i=0; i<60; i++) {
+                const angle = (i / 60) * Math.PI * 2;
+                // Push them far out
+                const dist = islandWidth/2 + 800 + Math.random() * 2000; 
                 const x = Math.cos(angle) * dist;
                 const z = Math.sin(angle) * dist;
 
-                // Create Tree
-                const trunk = new THREE.Mesh(trunkGeo, materials['wood']);
-                trunk.position.set(x, 10, z); // Float slightly in water
-                trunk.castShadow = true;
-                
-                const leaves = new THREE.Mesh(leaveGeo, materials['leaves']);
-                leaves.position.set(0, 50, 0);
-                leaves.castShadow = true;
-                trunk.add(leaves);
-
-                // Bobbing animation offset
-                trunk.userData = { 
-                    bobOffset: Math.random() * 100,
-                    baseY: 10
-                };
-                
-                scene.add(trunk);
-                
-                // Add to a decorative list if we wanted to animate them
-                // For now, let's animate in the main loop
-                trunk.name = "nature_asset";
+                let mesh;
+                if(i % 5 === 0) {
+                    // Huge mountain
+                    const height = 800 + Math.random() * 1200;
+                    const base = 600 + Math.random() * 800;
+                    mesh = new THREE.Mesh(new THREE.ConeGeometry(base, height, 6), mtnMat);
+                    mesh.position.set(x, height/2 + CONFIG.waterLevel - 100, z);
+                } else {
+                    // Smaller Rock cluster
+                    const rSize = 100 + Math.random() * 300;
+                    mesh = new THREE.Mesh(new THREE.DodecahedronGeometry(rSize, 0), rockMat);
+                    mesh.position.set(x, CONFIG.waterLevel, z);
+                    mesh.rotation.set(Math.random(), Math.random(), Math.random());
+                }
+                scene.add(mesh);
             }
         }
 
-        // --- TEXTURE SYSTEM ---
-        function createPixelTexture(color, noise = 0.1) {
+
+        // --- PROCEDURAL TEXTURES & MATERIALS ---
+        function createPixelTexture(color, noiseAmt = 20, AddBorder = true) {
             const size = 64;
             const canvas = document.createElement('canvas');
-            canvas.width = size;
-            canvas.height = size;
+            canvas.width = size; canvas.height = size;
             const ctx = canvas.getContext('2d');
-            
-            ctx.fillStyle = color;
-            ctx.fillRect(0,0,size,size);
-            
-            // Noise
-            for(let i=0; i<300; i++) {
-                const x = Math.floor(Math.random()*size);
-                const y = Math.floor(Math.random()*size);
-                const amt = (Math.random() - 0.5) * noise;
-                ctx.fillStyle = amt > 0 ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
-                ctx.fillRect(x,y,4,4);
+            ctx.fillStyle = color; ctx.fillRect(0,0,size,size);
+            for(let i=0; i<500; i++) {
+                const x = Math.floor(Math.random()*size); const y = Math.floor(Math.random()*size);
+                const shade = Math.random() > 0.5 ? noiseAmt : -noiseAmt;
+                ctx.fillStyle = shade > 0 ? `rgba(255,255,255,0.15)` : `rgba(0,0,0,0.15)`;
+                ctx.fillRect(x,y, Math.random()*4+1, Math.random()*4+1);
             }
-            
-            // Border
-            ctx.strokeStyle = "rgba(0,0,0,0.15)";
-            ctx.lineWidth = 4;
-            ctx.strokeRect(0,0,size,size);
-
+            if(AddBorder){
+                ctx.strokeStyle = "rgba(0,0,0,0.2)"; ctx.lineWidth = 4; ctx.strokeRect(0,0,size,size);
+            }
             const tex = new THREE.CanvasTexture(canvas);
-            tex.magFilter = THREE.NearestFilter;
+            tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter;
+            tex.colorSpace = THREE.SRGBColorSpace;
             return tex;
         }
 
+        function createWaterBumpMap() {
+             const size = 256;
+             const canvas = document.createElement('canvas');
+             canvas.width = size; canvas.height = size;
+             const ctx = canvas.getContext('2d');
+             ctx.fillStyle = '#7F7Fff'; // Flat normal
+             ctx.fillRect(0,0,size,size);
+             // Create some wavy noise patterns
+             for (let i = 0; i < 50; i++) {
+                ctx.beginPath();
+                const startX = Math.random() * size; const startY = Math.random() * size;
+                ctx.moveTo(startX, startY);
+                ctx.bezierCurveTo(startX + Math.random()*100-50, startY + Math.random()*100-50,
+                                  startX + Math.random()*100-50, startY + Math.random()*100-50,
+                                  startX + Math.random()*200-100, startY + Math.random()*200-100);
+                ctx.strokeStyle = Math.random() > 0.5 ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+                ctx.lineWidth = 5 + Math.random() * 10;
+                ctx.stroke();
+             }
+             const tex = new THREE.CanvasTexture(canvas);
+             tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+             tex.repeat.set(8,8);
+             return tex;
+        }
+
+
         function generateMaterials() {
+            // Basic building blocks (Lambert is fine for these)
             const mkMat = (col) => new THREE.MeshLambertMaterial({ map: createPixelTexture(col) });
-            
-            materials['stone'] = mkMat('#919191');
-            materials['wood'] = mkMat('#6d4c41');
-            materials['brick'] = mkMat('#c65d57');
-            materials['plank'] = mkMat('#e0c097');
-            materials['leaves'] = mkMat('#43a047');
-            
-            materials['glass'] = new THREE.MeshLambertMaterial({ 
-                color: 0xaed9e0, 
-                transparent: true, 
-                opacity: 0.6,
-                map: createPixelTexture('#aed9e0', 0.05)
+            materials['stone'] = mkMat('#888c8d');
+            materials['wood'] = mkMat('#6b5344');
+            materials['brick'] = mkMat('#b85c54');
+            materials['plank'] = mkMat('#d4b483');
+
+            // Special: Grass Block
+            const dirtTex = createPixelTexture('#5c4133');
+            const grassTex = createPixelTexture('#539c47');
+            materials['grass_block'] = [
+                new THREE.MeshLambertMaterial({ map: dirtTex }), new THREE.MeshLambertMaterial({ map: dirtTex }),
+                new THREE.MeshLambertMaterial({ map: grassTex }), new THREE.MeshLambertMaterial({ map: dirtTex }),
+                new THREE.MeshLambertMaterial({ map: dirtTex }), new THREE.MeshLambertMaterial({ map: dirtTex })
+            ];
+            materials['grass'] = materials['grass_block']; // Alias
+
+            // Special: NEW Clear Glass (Physical Material)
+            materials['glass'] = new THREE.MeshPhysicalMaterial({  
+                color: 0xffffff, metalness: 0, roughness: 0,
+                transmission: 0.98, // Highly transparent
+                opacity: 1, transparent: true,
+                envMapIntensity: 1.0, ior: 1.5,
+                thickness: 2.0,
+                map: createPixelTexture('#ffffff', 5, true) // subtle grid
             });
 
-            // Grass Block (Multi-material)
-            const dirtTex = createPixelTexture('#5d4037');
-            const grassTopTex = createPixelTexture('#66bb6a');
-            const grassMat = [
-                new THREE.MeshLambertMaterial({ map: dirtTex }), // Rx
-                new THREE.MeshLambertMaterial({ map: dirtTex }), // Lx
-                new THREE.MeshLambertMaterial({ map: grassTopTex }), // Top
-                new THREE.MeshLambertMaterial({ map: dirtTex }), // Bot
-                new THREE.MeshLambertMaterial({ map: dirtTex }), // Fz
-                new THREE.MeshLambertMaterial({ map: dirtTex })  // Bz
-            ];
-            materials['grass'] = grassMat;
+            // Special: NEW Water Block (Placeable)
+            materials['waterBlock'] = new THREE.MeshPhysicalMaterial({
+                color: 0x00aaff, transmission: 0.8, opacity: 0.9, transparent: true,
+                roughness: 0.1, metalness: 0.1, ior: 1.33, thickness: 5,
+                map: createPixelTexture('#00aaff', 10, false)
+            });
 
-            // Water
-            const waterTex = createPixelTexture('#29b6f6', 0.05);
-            materials['water'] = new THREE.MeshLambertMaterial({ 
-                map: waterTex, 
-                transparent: true, 
-                opacity: 0.8,
-                color: 0x22aaff 
+            // Special: NEW Light Block (Emissive)
+            materials['light'] = new THREE.MeshLambertMaterial({
+                color: 0xfff3bb,
+                emissive: 0xffe066, // Glow color
+                emissiveIntensity: 2.0,
+                map: createPixelTexture('#fff3bb', 5, true)
+            });
+
+            // Environment: Realistic Water Surface
+            const waterBump = createWaterBumpMap();
+            materials['realisticWater'] = new THREE.MeshPhysicalMaterial({
+                color: 0x2288ff,
+                metalness: 0.1, roughness: 0.15,
+                transmission: 0.85, // See-through to bottom
+                opacity: 0.9, transparent: true,
+                ior: 1.33,
+                bumpMap: waterBump, bumpScale: 0.3,
+                envMapIntensity: 1.5,
             });
         }
 
-        // --- GAME LOGIC ---
 
-        function spawnBlock(type) {
+        // --- INTERACTION LOGIC (Click-Carry-Click) ---
+
+        // 1. Start from Hotbar
+        function startPlacing(type) {
+            if (carriedBlock) dropCarriedBlock(); // Drop current if any
+            spawnBlockToCarry(type);
+        }
+
+        function spawnBlockToCarry(type) {
             let geometry;
             const size = CONFIG.blockSize;
+            if (type === 'plank') geometry = new THREE.BoxGeometry(size, size, size * 2);
+            else geometry = new THREE.BoxGeometry(size, size, size);
 
-            if (type === 'plank') {
-                geometry = new THREE.BoxGeometry(size, size, size * 2);
-            } else {
-                geometry = new THREE.BoxGeometry(size, size, size);
+            carriedBlock = new THREE.Mesh(geometry, materials[type]);
+            carriedBlock.castShadow = true;
+            // Transparent blocks shouldn't cast narrower shadows than they are
+            if(type !== 'glass' && type !== 'waterBlock') carriedBlock.receiveShadow = true;
+            
+            carriedBlock.userData = { type: type, isRotated: false };
+            
+            // If it's a light block, add actual light
+            if(type === 'light') {
+                const bulb = new THREE.PointLight(0xffe066, 800, 400); // High intensity, medium range
+                carriedBlock.add(bulb);
             }
 
-            const mat = materials[type];
-            const block = new THREE.Mesh(geometry, mat);
+            scene.add(carriedBlock);
             
-            // Spawn above center
-            block.position.set(0, 300, 0);
-            block.castShadow = true;
-            block.receiveShadow = true;
-            
-            block.userData = { type: type, isRotated: false };
-            
-            scene.add(block);
-            interactableObjects.push(block);
-            obstacleObjects.push(block);
+            // Create ghost visualization
+            placementGhost = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({color: 0x00ff00, transparent: true, opacity: 0.3, wireframe: true}));
+            scene.add(placementGhost);
+
+            updateCursorIcon(true);
         }
 
-        function rotateSelection() {
-            // Only for plank/beams
-            if (selectedBlock.userData.type !== 'plank') return;
 
-            const isRotated = !selectedBlock.userData.isRotated;
-            selectedBlock.userData.isRotated = isRotated;
-            const size = CONFIG.blockSize;
-
-            const newGeo = isRotated 
-                ? new THREE.BoxGeometry(size * 2, size, size) 
-                : new THREE.BoxGeometry(size, size, size * 2);
-            
-            selectedBlock.geometry.dispose();
-            selectedBlock.geometry = newGeo;
-        }
-
+        // 2. Pointer Down Handler (The core logic switch)
         function onPointerDown(event) {
+            // Ignore right clicks or UI clicks
             if (event.button !== 0 || event.target.closest('#ui-layer button') || event.target.closest('.slot')) return;
 
-            pointer.set(
-                (event.clientX / window.innerWidth) * 2 - 1,
-                -(event.clientY / window.innerHeight) * 2 + 1
-            );
-
+            updatePointer(event);
             raycaster.setFromCamera(pointer, camera);
-            const intersects = raycaster.intersectObjects(interactableObjects, false);
 
-            if (intersects.length > 0) {
-                isDragging = true;
-                selectedBlock = intersects[0].object;
-                controls.enabled = false;
-                
-                // Highlight effect
-                const mat = Array.isArray(selectedBlock.material) ? selectedBlock.material : [selectedBlock.material];
-                mat.forEach(m => m.emissive.setHex(0x555555));
+            if (carriedBlock) {
+                // --- ACTION: PLACE BLOCK ---
+                // Raycast against collision objects to find placement spot
+                const intersects = raycaster.intersectObjects(collisionObjects, false);
+                if (intersects.length > 0) {
+                    // Finalize position based on ghost
+                    carriedBlock.position.copy(placementGhost.position);
+                    
+                    // Add to world data
+                    currentInteractables.push(carriedBlock);
+                    collisionObjects.push(carriedBlock);
+                    
+                    // Cleanup state
+                    carriedBlock = null;
+                    scene.remove(placementGhost);
+                    placementGhost = null;
+                    updateCursorIcon(false);
+                }
+            } else {
+                // --- ACTION: PICK UP BLOCK ---
+                const intersects = raycaster.intersectObjects(currentInteractables, false);
+                if (intersects.length > 0) {
+                    const target = intersects[0].object;
+                    pickUpBlock(target);
+                }
             }
         }
 
-        function onPointerMove(event) {
-            // Handle visual trash bin interaction
-            const trashBin = document.getElementById('trash');
-            const rect = trashBin.getBoundingClientRect();
-            const hoveringTrash = (event.clientX > rect.left && event.clientX < rect.right && 
-                                   event.clientY > rect.top && event.clientY < rect.bottom);
+
+        function pickUpBlock(block) {
+            carriedBlock = block;
+            // Remove from collision lists while carrying
+            currentInteractables = currentInteractables.filter(o => o !== block);
+            collisionObjects = collisionObjects.filter(o => o !== block);
             
-            if (hoveringTrash) trashBin.classList.add('hover');
-            else trashBin.classList.remove('hover');
+            // Create ghost for re-placement
+            placementGhost = new THREE.Mesh(block.geometry, new THREE.MeshBasicMaterial({color: 0x00ff00, transparent: true, opacity: 0.3, wireframe: true}));
+            placementGhost.userData.isRotated = block.userData.isRotated;
+            scene.add(placementGhost);
+            updateCursorIcon(true);
+        }
 
-            if (!isDragging || !selectedBlock) return;
-
-            // Logic to move block
-            pointer.set(
-                (event.clientX / window.innerWidth) * 2 - 1,
-                -(event.clientY / window.innerHeight) * 2 + 1
-            );
-
+        // 3. Movement Handler (Moving the carried block/ghost)
+        function onPointerMove(event) {
+            if (!carriedBlock) return;
+            updatePointer(event);
             raycaster.setFromCamera(pointer, camera);
             
-            // Intersect with everything static (ground + other blocks) excluding self
-            const statics = obstacleObjects.filter(obj => obj !== selectedBlock);
-            const intersects = raycaster.intersectObjects(statics, false);
-
+            // Find surface to place on
+            const intersects = raycaster.intersectObjects(collisionObjects, false);
+            
             if (intersects.length > 0) {
                 const intersect = intersects[0];
                 const n = intersect.face.normal;
-                
-                // Calculate position based on grid
-                const targetPos = new THREE.Vector3().copy(intersect.point).add(n.multiplyScalar(CONFIG.blockSize * 0.5));
-                
-                // Snap to grid
-                targetPos.divideScalar(CONFIG.blockSize).floor().multiplyScalar(CONFIG.blockSize).addScalar(CONFIG.blockSize / 2);
-                
-                selectedBlock.position.copy(targetPos);
+                const size = CONFIG.blockSize;
 
-                // Handle Cuboid Alignment (2x1 blocks)
-                if (selectedBlock.userData.type === 'plank') {
-                     const offset = CONFIG.blockSize / 2;
-                     if (!selectedBlock.userData.isRotated) {
-                         // Long on Z
-                         if ( (selectedBlock.position.z / offset) % 2 !== 0 ) selectedBlock.position.z += offset;
-                     } else {
-                         // Long on X
-                         if ( (selectedBlock.position.x / offset) % 2 !== 0 ) selectedBlock.position.x += offset;
-                     }
+                // Calculate snapped position
+                const targetPos = new THREE.Vector3().copy(intersect.point).add(n.clone().multiplyScalar(size * 0.5));
+                targetPos.divideScalar(size).floor().multiplyScalar(size).addScalar(size / 2);
+                
+                // Update Ghost Position
+                placementGhost.position.copy(targetPos);
+                
+                // Handle Beam Rotation offsets
+                if (carriedBlock.userData.type === 'plank') {
+                    const offset = size / 2;
+                    if (!placementGhost.userData.isRotated) { // Long Z
+                        if ( Math.round(placementGhost.position.z / offset) % 2 !== 0 ) placementGhost.position.z += offset;
+                    } else { // Long X
+                        if ( Math.round(placementGhost.position.x / offset) % 2 !== 0 ) placementGhost.position.x += offset;
+                    }
                 }
+
+                // Move actual block way above so it doesn't interfere visually but is ready
+                carriedBlock.position.set(0, 5000, 0); 
             }
         }
 
-        function onPointerUp() {
-            const trashBin = document.getElementById('trash');
-
-            if (isDragging && selectedBlock) {
-                // Remove highlight
-                const mat = Array.isArray(selectedBlock.material) ? selectedBlock.material : [selectedBlock.material];
-                mat.forEach(m => m.emissive.setHex(0x000000));
-
-                // Delete if in trash
-                if (trashBin.classList.contains('hover')) {
-                    scene.remove(selectedBlock);
-                    interactableObjects = interactableObjects.filter(o => o !== selectedBlock);
-                    obstacleObjects = obstacleObjects.filter(o => o !== selectedBlock);
-                }
-            }
-
-            isDragging = false;
-            selectedBlock = null;
-            controls.enabled = true;
-            trashBin.classList.remove('hover');
+        function updatePointer(event) {
+            pointer.set((event.clientX / window.innerWidth) * 2 - 1, -(event.clientY / window.innerHeight) * 2 + 1);
         }
 
-        // --- I/O SYSTEMS ---
 
-        function downloadWorld() {
-            const data = interactableObjects.map(b => ({
+        function onKeyDown(e) {
+            // R to Rotate
+            if((e.key === 'r' || e.key === 'R') && carriedBlock && carriedBlock.userData.type === 'plank') {
+                rotateCarried();
+            }
+            // ESC to Cancel
+            if(e.key === 'Escape' && carriedBlock) {
+                dropCarriedBlock();
+            }
+        }
+
+        function rotateCarried() {
+            const isRotated = !carriedBlock.userData.isRotated;
+            carriedBlock.userData.isRotated = isRotated;
+            placementGhost.userData.isRotated = isRotated;
+            const size = CONFIG.blockSize;
+            const newGeo = isRotated ? new THREE.BoxGeometry(size * 2, size, size) : new THREE.BoxGeometry(size, size, size * 2);
+            carriedBlock.geometry.dispose(); carriedBlock.geometry = newGeo;
+            placementGhost.geometry.dispose(); placementGhost.geometry = newGeo;
+        }
+        
+        // Just delete the currently carried block
+        function dropCarriedBlock() {
+             if(!carriedBlock) return;
+             scene.remove(carriedBlock);
+             if(placementGhost) scene.remove(placementGhost);
+             carriedBlock = null;
+             placementGhost = null;
+             updateCursorIcon(false);
+        }
+
+        // Update UI Cursor
+        function updateCursorIcon(isCarrying) {
+            const cursor = document.getElementById('carrying-cursor');
+            cursor.style.display = isCarrying ? 'block' : 'none';
+            if(isCarrying) {
+                 document.body.style.cursor = 'grabbing';
+                 // Simple cursor follower
+                 const track = (e) => { cursor.style.left = e.clientX + 15 + 'px'; cursor.style.top = e.clientY + 15 + 'px'; }
+                 document.addEventListener('pointermove', track, {once: !isCarrying});
+            } else {
+                 document.body.style.cursor = 'default';
+            }
+        }
+
+        // --- WORLD MANAGEMENT ---
+
+        function switchWorld(newIndex) {
+            if(currentWorldIdx === newIndex && currentInteractables.length > 0) return; // Already here
+
+            // 1. Save current state to memory array
+            worlds[currentWorldIdx].data = currentInteractables.map(b => ({
                 type: b.userData.type,
-                x: b.position.x,
-                y: b.position.y,
-                z: b.position.z,
+                x: b.position.x, y: b.position.y, z: b.position.z,
                 r: b.userData.isRotated
             }));
 
-            const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+            // 2. Clear Scene
+            dropCarriedBlock();
+            currentInteractables.forEach(o => scene.remove(o));
+            currentInteractables = [];
+            collisionObjects = [groundPlane]; // Reset collisions to just ground
+
+            // 3. Load new state
+            currentWorldIdx = newIndex;
+            const newData = worlds[newIndex].data || [];
+            newData.forEach(blockData => reconstructBlock(blockData));
+
+            // 4. Update UI
+            document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === newIndex));
+        }
+
+        // Helper to rebuild a block from data
+        function reconstructBlock(bData) {
+            let geometry; const size = CONFIG.blockSize;
+            if (bData.type === 'plank') geometry = bData.r ? new THREE.BoxGeometry(size*2, size, size) : new THREE.BoxGeometry(size, size, size*2);
+            else geometry = new THREE.BoxGeometry(size, size, size);
+
+            const block = new THREE.Mesh(geometry, materials[bData.type]);
+            block.position.set(bData.x, bData.y, bData.z);
+            block.castShadow = true;
+            if(bData.type !== 'glass' && bData.type !== 'waterBlock') block.receiveShadow = true;
+            block.userData = { type: bData.type, isRotated: bData.r };
+
+            if(bData.type === 'light') {
+                 const bulb = new THREE.PointLight(0xffe066, 800, 400);
+                 block.add(bulb);
+            }
+            scene.add(block);
+            currentInteractables.push(block);
+            collisionObjects.push(block);
+        }
+
+        function clearCurrentWorld() {
+            if(confirm("Delete everything in this world tab?")) {
+                dropCarriedBlock();
+                currentInteractables.forEach(o => scene.remove(o));
+                currentInteractables = [];
+                collisionObjects = [groundPlane];
+                worlds[currentWorldIdx].data = [];
+            }
+        }
+        
+        function downloadWorld() {
+            // Save current state first to ensure up to date
+            worlds[currentWorldIdx].data = currentInteractables.map(b => ({
+                type: b.userData.type, x: b.position.x, y: b.position.y, z: b.position.z, r: b.userData.isRotated
+            }));
+            const dataStr = JSON.stringify(worlds[currentWorldIdx].data);
+            const blob = new Blob([dataStr], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url;
-            a.download = 'my-voxel-world.json';
-            a.click();
-            URL.revokeObjectURL(url);
+            a.href = url; a.download = `voxel-world-${currentWorldIdx === 0 ? 'alpha' : 'beta'}.json`;
+            a.click(); URL.revokeObjectURL(url);
         }
 
         function handleFileLoad(event) {
             const file = event.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
                     const data = JSON.parse(e.target.result);
-                    clearWorld(); // Clear existing
-                    
-                    data.forEach(b => {
-                        spawnBlock(b.type);
-                        // Get the block we just added (last in array)
-                        const newBlock = interactableObjects[interactableObjects.length - 1];
-                        newBlock.position.set(b.x, b.y, b.z);
-                        
-                        // Handle rotation
-                        if (b.r) {
-                            selectedBlock = newBlock; 
-                            rotateSelection();
-                            selectedBlock = null;
-                        }
-                    });
-                } catch (err) {
-                    alert("Error loading file: " + err);
-                }
+                    // Clear and load into current tab
+                    dropCarriedBlock();
+                    currentInteractables.forEach(o => scene.remove(o));
+                    currentInteractables = [];
+                    collisionObjects = [groundPlane];
+                    data.forEach(bData => reconstructBlock(bData));
+                } catch (err) { alert("Failed to load file."); }
             };
             reader.readAsText(file);
-            // Reset input so we can load same file again if needed
-            event.target.value = ''; 
+            event.target.value = '';
         }
 
-        function clearWorld() {
-            // Remove all interactables
-            interactableObjects.forEach(o => scene.remove(o));
-            interactableObjects = [];
-            // Reset obstacles to just the ground
-            obstacleObjects = [groundPlane];
-        }
 
         function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
@@ -630,24 +757,24 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        // --- ANIMATION ---
         function animate(time) {
             requestAnimationFrame(animate);
             controls.update();
 
-            // Animate Water
-            if(waterMesh) {
-                waterMesh.material.map.offset.y += 0.001;
-                waterMesh.material.map.offset.x += 0.0005;
+            // Animate realistic water bump map
+            if (materials['realisticWater'].bumpMap) {
+                materials['realisticWater'].bumpMap.offset.x = time * 0.0001;
+                materials['realisticWater'].bumpMap.offset.y = time * 0.0002;
             }
-
-            // Animate Nature (Bobbing)
-            scene.traverse((obj) => {
-                if(obj.name === 'nature_asset') {
-                    obj.position.y = obj.userData.baseY + Math.sin(time * 0.002 + obj.userData.bobOffset) * 2;
+            
+            // Gentle floating for placement ghost if active
+            if(placementGhost) {
+                placementGhost.position.y += Math.sin(time * 0.005) * 0.5;
+                if(placementGhost.userData.isRotated !== carriedBlock.userData.isRotated) {
+                      rotateCarried(); //Sync rotation state if it got out of sync
                 }
-            });
-
+            }
+            
             renderer.render(scene, camera);
         }
     </script>
