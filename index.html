@@ -2,140 +2,133 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Voxel Architect - Studio Edition</title>
+    <title>Voxel Builder - Big Platform</title>
     <style>
-        /* Professional, non-gamey font */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap');
 
         :root {
+            --bg-color: #333;
+            --sky-color: #a8d9ef;
+            --ui-bg: rgba(255, 255, 255, 0.2);
+            --slot-bg: #444;
+            --slot-border: #555;
+            --text-color: #fff;
+            --btn-bg: #fff;
+            --btn-text: #333;
+        }
+
+        body.dark-mode {
             --bg-color: #1a1a2e;
-            --ui-bg: rgba(30, 30, 35, 0.95); /* Opaque, professional look */
-            --ui-border: #444;
+            --sky-color: #1a1a2e;
+            --ui-bg: rgba(0, 0, 0, 0.4);
+            --slot-bg: #2a2a2a;
+            --slot-border: #444;
             --text-color: #eee;
-            --accent: #007acc; /* VS Code / CAD blue */
-            --danger: #d94444;
-            --slot-bg: #252526;
+            --btn-bg: #444;
+            --btn-text: #fff;
         }
 
-        body.light-mode {
-            --bg-color: #87CEEB;
-            --ui-bg: rgba(255, 255, 255, 0.95);
-            --ui-border: #ccc;
-            --text-color: #333;
-            --accent: #0066cc;
-            --slot-bg: #f3f3f3;
-        }
-
-        body { 
-            margin: 0; overflow: hidden; 
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
-            user-select: none; background: var(--bg-color); 
-            transition: background 0.3s; 
-        }
+        body { margin: 0; overflow: hidden; font-family: 'Fredoka', sans-serif; user-select: none; background: var(--sky-color); transition: background 0.3s; }
         
-        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-
-        /* Top Bar: Clean & Architectural */
-        #top-area {
-            position: absolute; top: 0; left: 0; width: 100%; height: 50px;
-            background: var(--ui-bg); border-bottom: 1px solid var(--ui-border);
-            display: flex; justify-content: space-between; align-items: center;
-            pointer-events: auto; padding: 0 20px; box-sizing: border-box;
+        /* UI Overlay */
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;
         }
 
-        #app-title { font-weight: 600; font-size: 16px; color: var(--text-color); display: flex; align-items: center; gap: 10px; }
-        
-        #theme-toggle {
-            background: transparent; border: 1px solid var(--ui-border);
-            color: var(--text-color); padding: 5px 10px; border-radius: 4px;
-            cursor: pointer; font-size: 12px;
+        /* Top Control Bar */
+        #top-bar {
+            position: absolute; top: 20px; left: 20px;
+            display: flex; gap: 10px; pointer-events: auto; align-items: center;
         }
 
-        /* Tabs - mimicking browser tabs or sheet tabs */
+        /* World Tabs */
         #tab-container {
-            display: flex; gap: 2px; align-items: flex-end; height: 100%;
+            display: flex; gap: 8px; margin-left: 20px;
+            background: rgba(0,0,0,0.2); padding: 5px; border-radius: 30px;
+            backdrop-filter: blur(4px);
         }
 
         .world-tab {
-            padding: 0 15px; height: 35px; border-radius: 4px 4px 0 0;
-            background: transparent; color: var(--text-color);
-            border: none; cursor: pointer;
-            font-size: 12px; font-weight: 500;
-            display: flex; align-items: center; gap: 8px;
-            opacity: 0.7; transition: all 0.2s;
-            margin-top: 15px; /* Push to bottom of bar */
+            background: rgba(255,255,255,0.2); color: white;
+            border: none; padding: 8px 15px; border-radius: 20px;
+            cursor: pointer; font-family: inherit; font-weight: 600; font-size: 12px;
+            transition: all 0.2s; display: flex; align-items: center; gap: 5px;
         }
-        .world-tab.active { 
-            background: var(--accent); color: white; opacity: 1; 
-        }
-        .world-tab:hover:not(.active) { background: var(--ui-border); }
-        
+        .world-tab.active { background: #4CAF50; box-shadow: 0 4px 0 #2E7D32; transform: translateY(-2px); }
+        .world-tab:hover:not(.active) { background: rgba(255,255,255,0.4); }
+
         .del-tab {
-            font-size: 14px; width: 16px; height: 16px;
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            opacity: 0.5; transition: opacity 0.2s;
+            width: 16px; height: 16px; background: rgba(0,0,0,0.2); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 10px;
         }
-        .del-tab:hover { opacity: 1; background: rgba(0,0,0,0.2); }
+        .del-tab:hover { background: #FF5252; }
 
-        /* Side Toolbar */
-        #side-controls {
-            position: absolute; top: 70px; left: 20px;
-            display: flex; flex-direction: column; gap: 8px; pointer-events: auto;
+        /* Buttons */
+        button.btn {
+            background: var(--btn-bg); color: var(--btn-text); border: none;
+            padding: 10px 20px; border-radius: 30px; cursor: pointer;
+            font-family: inherit; font-weight: 600; font-size: 14px;
+            box-shadow: 0 4px 0 #999, 0 5px 10px rgba(0,0,0,0.2);
+            transition: transform 0.1s, box-shadow 0.1s;
         }
-        .btn {
-            background: var(--ui-bg); color: var(--text-color);
-            border: 1px solid var(--ui-border); padding: 8px 12px;
-            border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500;
-            text-align: left; width: 120px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            transition: background 0.1s;
-        }
-        .btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
+        button.btn:active { transform: translateY(4px); box-shadow: 0 0 0 #999, inset 0 2px 5px rgba(0,0,0,0.1); }
+        button.btn.primary { background: #4CAF50; color: white; box-shadow: 0 4px 0 #2E7D32; }
 
-        /* Instructions - Minimalist */
+        /* Instructions */
         #instructions {
-            position: absolute; top: 70px; right: 20px;
-            background: var(--ui-bg); padding: 15px;
-            border-radius: 4px; color: var(--text-color);
-            font-size: 11px; line-height: 1.6; border: 1px solid var(--ui-border);
-            width: 180px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(0,0,0,0.5); padding: 15px; border-radius: 12px;
+            color: white; font-size: 13px; line-height: 1.6; backdrop-filter: blur(4px);
         }
-        #instructions b { color: var(--accent); font-weight: 600; }
+        #instructions b { color: #87CEEB; }
 
-        /* Hotbar - The "Actual Blocks" Look */
+        /* Trash Bin */
+        #trash {
+            position: absolute; bottom: 30px; right: 30px;
+            width: 80px; height: 80px;
+            background: rgba(255, 69, 58, 0.2);
+            border: 3px dashed #ff453a; border-radius: 20px;
+            display: flex; align-items: center; justify-content: center;
+            color: #ff453a; font-weight: bold; font-size: 12px; text-align: center;
+            pointer-events: auto; cursor: pointer; transition: all 0.2s;
+        }
+        #trash:hover { background: rgba(255, 69, 58, 0.8); color: white; border-style: solid; transform: scale(1.1); }
+
+        /* Hotbar */
         #hotbar {
-            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
-            background: var(--ui-bg); padding: 10px; border-radius: 8px;
-            display: flex; gap: 10px; border: 1px solid var(--ui-border);
-            pointer-events: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: var(--ui-bg); backdrop-filter: blur(5px);
+            padding: 10px; border-radius: 16px;
+            display: flex; gap: 12px; border: 2px solid rgba(255,255,255,0.5);
+            pointer-events: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.3);
         }
 
-        .slot-container {
-            display: flex; flex-direction: column; align-items: center; gap: 5px;
-            cursor: pointer; group;
-        }
-
+        .slot-container { display: flex; flex-direction: column; align-items: center; cursor: pointer; }
+        
         .slot {
-            width: 45px; height: 45px; border-radius: 4px;
-            background-color: var(--slot-bg); 
-            border: 2px solid transparent;
-            /* Texture will be applied via JS inline style */
-            background-size: cover; 
-            image-rendering: pixelated; /* Sharp textures */
-            transition: all 0.1s;
+            width: 60px; height: 60px; border-radius: 12px;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background-color: var(--slot-bg);
+            border: 3px solid var(--slot-border);
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            background-size: 70%; background-repeat: no-repeat; background-position: center;
+            image-rendering: pixelated;
         }
 
-        .slot-container:hover .slot { border-color: var(--accent); transform: translateY(-2px); }
+        .slot-container:hover .slot { transform: scale(1.15) translateY(-5px); border-color: #fff; z-index: 10; }
         .slot-container:active .slot { transform: scale(0.95); }
 
         .slot-label {
-            font-size: 10px; color: var(--text-color); font-weight: 500; opacity: 0.8;
+            margin-top: 5px; color: white; font-size: 12px; font-weight: 600;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8); opacity: 0; transition: opacity 0.2s;
+            position: absolute; bottom: -20px; width: 100%; text-align: center; pointer-events: none;
         }
+        .slot-container:hover .slot-label { opacity: 1; }
 
-        /* Visual helpers */
+        /* Carrying Cursor */
         #carrying-cursor {
             position: fixed; pointer-events: none; z-index: 100;
-            display: none; font-size: 24px; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3));
+            display: none; font-size: 24px; filter: drop-shadow(0 0 5px rgba(0,0,0,0.5));
         }
 
         #fileInput { display: none; }
@@ -144,28 +137,25 @@
 <body class="light-mode">
 
     <div id="ui-layer">
-        <div id="top-area">
-            <div id="app-title">
-                <span style="color:var(--accent)">■</span> Voxel Architect
-            </div>
+        <div id="top-bar">
+            <button class="btn" onclick="downloadWorld()">💾 Save</button>
+            <button class="btn" onclick="triggerLoad()">📂 Load</button>
+            <button class="btn primary" onclick="toggleTheme()">🌗 Theme</button>
+            
             <div id="tab-container">
-                <button class="world-tab" onclick="createNewWorld()" style="font-size: 16px;">+</button>
+                <button class="world-tab" onclick="createNewWorld()" style="padding: 5px 10px;">+</button>
             </div>
-            <button id="theme-toggle" onclick="toggleTheme()">Theme</button>
-        </div>
-
-        <div id="side-controls">
-            <button class="btn" onclick="downloadWorld()">💾 Export JSON</button>
-            <button class="btn" onclick="triggerLoad()">📂 Import JSON</button>
         </div>
 
         <div id="instructions">
-            <b>Left Click Block:</b> Pick Up<br>
-            <b>Left Click Empty:</b> Place<br>
-            <b>Right Drag:</b> Rotate View<br>
-            <b>R Key:</b> Rotate Beam<br>
-            <b>ESC:</b> Cancel Selection
+            🖱️ <b>Click Block</b>: Pick Up<br>
+            🖱️ <b>Click Empty</b>: Place<br>
+            🖱️ <b>Right Drag</b>: Rotate Cam<br>
+            🗑️ <b>Click Red Bin</b>: Delete<br>
+            ⌨️ <b>ESC Key</b>: Cancel
         </div>
+
+        <div id="trash" onclick="dropCarried()">CLICK TO<br>DELETE</div>
 
         <div id="hotbar">
             </div>
@@ -191,79 +181,80 @@
         // --- Configuration ---
         const CONFIG = {
             blockSize: 50,
-            islandSize: 40, 
+            islandSize: 60, // Significantly Larger Platform
             waterLevel: -25,
-            darkSky: 0x1a1a2e,
-            lightSky: 0x87CEEB,
+            skyColorLight: 0xa8d9ef,
+            skyColorDark: 0x1a1a2e,
             maxWorlds: 10
         };
 
-        // --- Block Definitions (Easy to expand) ---
+        // --- Block Types (Cubes Only) ---
         const BLOCK_TYPES = [
             { id: 'grass', label: 'Grass', color: '#58a04c', noise: true },
-            { id: 'stone', label: 'Stone', color: '#999999', noise: true },
+            { id: 'stone', label: 'Stone', color: '#7d7d7d', noise: true },
             { id: 'wood', label: 'Log', color: '#8b5a2b', noise: true },
-            { id: 'plank', label: 'Beam', color: '#d2a679', noise: false }, // Smoother
             { id: 'brick', label: 'Brick', color: '#a04c4c', noise: true },
-            { id: 'glass', label: 'Glass', color: '#aed9e0', noise: false, opacity: 0.4 },
+            { id: 'plank_cube', label: 'Wood', color: '#d2a679', noise: false }, // Renamed from plank, made cube
+            { id: 'glass', label: 'Glass', color: '#aed9e0', noise: false, opacity: 0.5 },
             { id: 'waterBlock', label: 'Water', color: '#4fa4b8', noise: false, opacity: 0.7 },
-            { id: 'light', label: 'Light', color: '#fff3bb', noise: false, emissive: true }
+            { id: 'light', label: 'Lamp', color: '#fff3bb', noise: false, emissive: true }
         ];
 
         let camera, scene, renderer, controls;
         let groundPlane, waterMesh;
         let raycaster, pointer;
-        let worlds = []; 
+        
+        let worlds = [];
         let currentWorldId = null;
         let worldCounter = 1;
 
-        let currentInteractables = []; 
-        let collisionObjects = []; 
+        let interactableObjects = []; 
+        let obstacleObjects = []; 
+        
         let carriedBlock = null; 
         let placementGhost = null; 
         const materials = {};
-        const textures = {}; // Store generated data URLs for UI
-        
         let isDarkMode = false;
 
         init();
         animate();
 
-        // --- Expose functions ---
-        window.startPlacing = startPlacing;
+        // Global functions
+        window.spawnBlock = spawnBlock;
         window.downloadWorld = downloadWorld;
         window.triggerLoad = () => document.getElementById('fileInput').click();
         window.toggleTheme = toggleTheme;
         window.createNewWorld = createNewWorld;
         window.switchWorld = switchWorld;
         window.deleteWorld = deleteWorld;
+        window.dropCarried = dropCarried;
 
         document.getElementById('fileInput').addEventListener('change', handleFileLoad, false);
 
         function init() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(CONFIG.lightSky);
+            scene.background = new THREE.Color(CONFIG.skyColorLight);
+            scene.fog = new THREE.Fog(CONFIG.skyColorLight, 500, 3500);
 
             camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 8000);
-            camera.position.set(1600, 1400, 1600); // Isometric-ish angle
+            camera.position.set(1600, 1400, 1600); // Zoomed out for bigger island
 
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+            renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             document.body.appendChild(renderer.domElement);
 
             setupLighting();
-            generateMaterialsAndUI(); // Generate textures and UI icons together
+            generateMaterialsAndUI();
             createEnvironment();
 
             controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
-            controls.dampingFactor = 0.1;
-            controls.maxPolarAngle = Math.PI / 2 - 0.1; 
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 - 0.1;
             controls.minDistance = 200;
             controls.maxDistance = 4000;
-            // Strict mouse mapping for CAD feel
             controls.mouseButtons = { LEFT: null, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
 
             raycaster = new THREE.Raycaster();
@@ -272,64 +263,46 @@
             window.addEventListener('resize', onWindowResize);
             document.addEventListener('pointerdown', onPointerDown);
             document.addEventListener('pointermove', onPointerMove);
-            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keydown', (e) => { if(e.key==='Escape') dropCarried(); });
 
             createNewWorld();
         }
 
-        // --- Dynamic Material & Icon Generation ---
         function generateMaterialsAndUI() {
             const hotbar = document.getElementById('hotbar');
             
             BLOCK_TYPES.forEach(block => {
-                // 1. Generate Texture Data
+                // Texture Gen
                 const canvas = document.createElement('canvas');
                 canvas.width = 64; canvas.height = 64;
                 const ctx = canvas.getContext('2d');
+                ctx.fillStyle = block.color; ctx.fillRect(0,0,64,64);
                 
-                // Fill Base
-                ctx.fillStyle = block.color;
-                ctx.fillRect(0,0,64,64);
-                
-                // Add Noise/Texture details
                 if(block.noise) {
                     for(let i=0; i<300; i++) {
                         ctx.fillStyle = Math.random()>0.5 ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
-                        ctx.fillRect(Math.random()*64, Math.random()*64, 4, 4);
+                        ctx.fillRect(Math.random()*64, Math.random()*64,4,4);
                     }
-                    // Border
                     ctx.strokeStyle = "rgba(0,0,0,0.15)"; ctx.lineWidth = 4; ctx.strokeRect(0,0,64,64);
                 } else if(block.id === 'glass') {
-                    // Window frame look
                     ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = 4; ctx.strokeRect(0,0,64,64);
-                    ctx.beginPath(); ctx.moveTo(0,64); ctx.lineTo(15,50); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0,64); ctx.lineTo(20,44); ctx.stroke();
                 }
 
-                // 2. Create Three.js Texture
                 const tex = new THREE.CanvasTexture(canvas);
-                tex.magFilter = THREE.NearestFilter;
-                tex.colorSpace = THREE.SRGBColorSpace;
+                tex.magFilter = THREE.NearestFilter; tex.colorSpace = THREE.SRGBColorSpace;
                 
-                // 3. Create Material
+                // Material Creation
                 const matParams = { map: tex };
-                if(block.opacity) {
-                    matParams.transparent = true;
-                    matParams.opacity = block.opacity;
-                }
-                if(block.emissive) {
-                    matParams.emissive = block.color;
-                    matParams.emissiveIntensity = 0.5;
-                }
+                if(block.opacity) { matParams.transparent = true; matParams.opacity = block.opacity; }
+                if(block.emissive) { matParams.emissive = block.color; matParams.emissiveIntensity = 0.5; }
 
                 if(block.id === 'grass') {
-                     // Special case for grass (side vs top)
                      const dirtC = document.createElement('canvas'); dirtC.width=64; dirtC.height=64;
                      const dCtx = dirtC.getContext('2d'); dCtx.fillStyle = '#5d4037'; dCtx.fillRect(0,0,64,64);
-                     // Add some noise to dirt
                      for(let i=0; i<200; i++) { dCtx.fillStyle='rgba(0,0,0,0.1)'; dCtx.fillRect(Math.random()*64, Math.random()*64,4,4); }
                      dCtx.strokeStyle = "rgba(0,0,0,0.1)"; dCtx.lineWidth=4; dCtx.strokeRect(0,0,64,64);
                      const dirtTex = new THREE.CanvasTexture(dirtC); dirtTex.magFilter = THREE.NearestFilter; dirtTex.colorSpace = THREE.SRGBColorSpace;
-                     
                      materials[block.id] = [
                          new THREE.MeshLambertMaterial({map: dirtTex}), new THREE.MeshLambertMaterial({map: dirtTex}),
                          new THREE.MeshLambertMaterial(matParams), new THREE.MeshLambertMaterial({map: dirtTex}),
@@ -339,14 +312,13 @@
                     materials[block.id] = new THREE.MeshLambertMaterial(matParams);
                 }
 
-                // 4. Create UI Element
+                // UI Icon
                 const container = document.createElement('div');
                 container.className = 'slot-container';
-                container.onclick = () => startPlacing(block.id);
+                container.onclick = () => spawnBlock(block.id);
                 
                 const slot = document.createElement('div');
                 slot.className = 'slot';
-                // Use the generated canvas as the CSS background
                 slot.style.backgroundImage = `url(${canvas.toDataURL()})`;
                 
                 const label = document.createElement('span');
@@ -358,135 +330,112 @@
                 hotbar.appendChild(container);
             });
 
-            // Extra Water Material for Sea
-            materials['sea'] = new THREE.MeshLambertMaterial({
-                color: 0x4fa4b8, transparent: true, opacity: 0.85
-            });
+            // Water material
+            const c = document.createElement('canvas'); c.width=64; c.height=64;
+            const ctx = c.getContext('2d'); ctx.fillStyle='#29b6f6'; ctx.fillRect(0,0,64,64);
+            for(let i=0;i<50;i++){ ctx.fillStyle='rgba(255,255,255,0.2)'; ctx.fillRect(Math.random()*60, Math.random()*60, 8,2); }
+            const t = new THREE.CanvasTexture(c); t.magFilter=THREE.NearestFilter; 
+            materials['water'] = new THREE.MeshLambertMaterial({ color: 0x22aaff, transparent: true, opacity: 0.8, map: t });
         }
 
         function setupLighting() {
-            const amb = new THREE.AmbientLight(0xffffff, 0.7);
-            scene.add(amb);
-            
-            const sun = new THREE.DirectionalLight(0xfff5e1, 1.4);
+            const ambient = new THREE.AmbientLight(0xffffff, 0.65);
+            scene.add(ambient);
+
+            const sun = new THREE.DirectionalLight(0xfff5e1, 1.2);
             sun.name = 'sun';
-            sun.position.set(1000, 1500, 800);
+            sun.position.set(500, 1000, 500);
             sun.castShadow = true;
             sun.shadow.mapSize.set(2048, 2048);
-            sun.shadow.camera.far = 4000;
-            const d = 2000;
-            sun.shadow.camera.left = -d; sun.shadow.camera.right = d;
-            sun.shadow.camera.top = d; sun.shadow.camera.bottom = -d;
-            sun.shadow.bias = -0.0005;
             scene.add(sun);
         }
 
-        // --- Environment (CoC Style: Nature + Base) ---
         function createEnvironment() {
-            // 1. Main Base Platform
-            const size = CONFIG.blockSize * CONFIG.islandSize;
-            const geo = new THREE.BoxGeometry(size, CONFIG.blockSize, size);
-            groundPlane = new THREE.Mesh(geo, materials['grass']);
-            groundPlane.position.y = -CONFIG.blockSize/2;
-            groundPlane.receiveShadow = true;
-            scene.add(groundPlane);
-
-            // 2. Infinite Water
-            const wGeo = new THREE.PlaneGeometry(10000, 10000);
-            waterMesh = new THREE.Mesh(wGeo, materials['sea']);
-            waterMesh.rotation.x = -Math.PI/2;
-            waterMesh.position.y = CONFIG.waterLevel;
+            // Big Water Plane
+            const waterGeo = new THREE.PlaneGeometry(8000, 8000);
+            waterGeo.rotateX(-Math.PI / 2);
+            const waterTex = materials['water'].map;
+            waterTex.wrapS = THREE.RepeatWrapping; waterTex.wrapT = THREE.RepeatWrapping;
+            waterTex.repeat.set(40, 40);
+            waterMesh = new THREE.Mesh(waterGeo, materials['water']);
+            waterMesh.position.y = -20;
             scene.add(waterMesh);
 
-            // 3. Nature (Trees & Rocks surrounding the base)
+            // Large Island Base
+            const size = CONFIG.blockSize * CONFIG.islandSize;
+            const islandGeo = new THREE.BoxGeometry(size, CONFIG.blockSize, size);
+            groundPlane = new THREE.Mesh(islandGeo, materials['grass']);
+            groundPlane.position.y = -CONFIG.blockSize / 2;
+            groundPlane.receiveShadow = true;
+            scene.add(groundPlane);
+            obstacleObjects.push(groundPlane);
+
             generateNature(size);
         }
 
-        function generateNature(baseSize) {
-            // Add decorative trees outside the build area
-            const treeCount = 60;
-            const trunkGeo = new THREE.BoxGeometry(20, 40, 20);
-            const leafGeo = new THREE.BoxGeometry(50, 50, 50);
-            const rockGeo = new THREE.DodecahedronGeometry(25, 0);
+        function generateNature(islandWidth) {
+            const count = 50; // More trees for bigger island
+            const minDist = islandWidth / 2 + 100;
+            const maxDist = islandWidth / 2 + 1000;
+            const trunkGeo = new THREE.BoxGeometry(30, 60, 30);
+            const leaveGeo = new THREE.BoxGeometry(70, 70, 70);
 
-            for(let i=0; i<treeCount; i++) {
+            for(let i=0; i<count; i++) {
                 const angle = Math.random() * Math.PI * 2;
-                // Position between edge of base and far out
-                const dist = baseSize/2 + 100 + Math.random() * 800;
-                
+                const dist = minDist + Math.random() * (maxDist - minDist);
                 const x = Math.cos(angle) * dist;
                 const z = Math.sin(angle) * dist;
 
-                if(i % 3 === 0) {
-                    // Rock
-                    const rock = new THREE.Mesh(rockGeo, materials['stone']);
-                    rock.position.set(x, CONFIG.waterLevel + 10, z);
-                    rock.rotation.set(Math.random(), Math.random(), Math.random());
-                    rock.castShadow = true;
-                    scene.add(rock);
-                } else {
-                    // Tree (Group)
-                    const group = new THREE.Group();
-                    group.position.set(x, CONFIG.waterLevel + 20, z);
-                    
-                    const trunk = new THREE.Mesh(trunkGeo, materials['wood']);
-                    trunk.castShadow = true;
-                    
-                    const leaves = new THREE.Mesh(leafGeo, materials['grass'][2]); // Use grass top texture
-                    leaves.position.y = 40;
-                    leaves.castShadow = true;
+                const trunk = new THREE.Mesh(trunkGeo, materials['wood']);
+                trunk.position.set(x, 10, z);
+                trunk.castShadow = true;
+                
+                const leaves = new THREE.Mesh(leaveGeo, materials['grass'][2]); 
+                leaves.position.set(0, 50, 0);
+                leaves.castShadow = true;
+                trunk.add(leaves);
 
-                    group.add(trunk);
-                    group.add(leaves);
-                    
-                    // Random slight rotation/scale for variety
-                    const s = 0.8 + Math.random()*0.5;
-                    group.scale.set(s,s,s);
-                    group.rotation.y = Math.random();
-                    
-                    scene.add(group);
-                }
+                trunk.userData = { bobOffset: Math.random()*100, baseY: 10 };
+                trunk.name = "nature_asset";
+                scene.add(trunk);
             }
         }
 
-        // --- Interaction Logic ---
-        function startPlacing(type) {
+        // --- Interaction ---
+        function spawnBlock(type) {
             if(carriedBlock) dropCarried();
             const size = CONFIG.blockSize;
-            const geo = (type==='plank') ? new THREE.BoxGeometry(size, size, size*2) : new THREE.BoxGeometry(size, size, size);
+            // Everything is a cube now
+            const geo = new THREE.BoxGeometry(size, size, size);
             
             carriedBlock = new THREE.Mesh(geo, materials[type]);
             carriedBlock.castShadow = true;
             carriedBlock.receiveShadow = true;
-            carriedBlock.userData = { type: type, r: false };
+            carriedBlock.userData = { type: type };
             
-            if(type === 'light') {
-                carriedBlock.add(new THREE.PointLight(0xffaa00, 600, 400));
-            }
+            if(type === 'light') carriedBlock.add(new THREE.PointLight(0xffaa00, 600, 400));
 
             scene.add(carriedBlock);
             
-            // Wireframe ghost
-            const edges = new THREE.EdgesGeometry(geo);
-            placementGhost = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 }));
+            placementGhost = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({color:0x00ff00, wireframe:true, opacity:0.5, transparent:true}));
             scene.add(placementGhost);
             
             updateCursor(true);
         }
 
         function onPointerDown(e) {
-            if(e.button !== 0 || e.target.closest('#ui-layer button') || e.target.closest('.slot-container')) return;
+            if(e.button !== 0 || e.target.closest('#ui-layer button') || e.target.closest('.slot-container') || e.target.closest('#trash')) return;
             
             updatePointer(e);
             raycaster.setFromCamera(pointer, camera);
 
             if(carriedBlock) {
                 // Place
-                const intersects = raycaster.intersectObjects(collisionObjects, false);
+                const intersects = raycaster.intersectObjects(obstacleObjects, false);
                 if(intersects.length > 0) {
                     carriedBlock.position.copy(placementGhost.position);
-                    currentInteractables.push(carriedBlock);
-                    collisionObjects.push(carriedBlock);
+                    interactableObjects.push(carriedBlock);
+                    obstacleObjects.push(carriedBlock);
                     carriedBlock = null;
                     scene.remove(placementGhost);
                     placementGhost = null;
@@ -494,19 +443,14 @@
                 }
             } else {
                 // Pick Up
-                const intersects = raycaster.intersectObjects(currentInteractables, false);
+                const intersects = raycaster.intersectObjects(interactableObjects, false);
                 if(intersects.length > 0) {
                     const target = intersects[0].object;
                     carriedBlock = target;
-                    currentInteractables = currentInteractables.filter(o => o !== target);
-                    collisionObjects = collisionObjects.filter(o => o !== target);
+                    interactableObjects = interactableObjects.filter(o => o !== target);
+                    obstacleObjects = obstacleObjects.filter(o => o !== target);
                     
-                    const geo = target.geometry;
-                    const edges = new THREE.EdgesGeometry(geo);
-                    placementGhost = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 }));
-                    placementGhost.position.copy(target.position);
-                    placementGhost.userData.r = target.userData.r;
-                    
+                    placementGhost = new THREE.Mesh(target.geometry, new THREE.MeshBasicMaterial({color:0x00ff00, wireframe:true}));
                     scene.add(placementGhost);
                     updateCursor(true);
                 }
@@ -517,7 +461,7 @@
             if(!carriedBlock) return;
             updatePointer(e);
             raycaster.setFromCamera(pointer, camera);
-            const intersects = raycaster.intersectObjects(collisionObjects, false);
+            const intersects = raycaster.intersectObjects(obstacleObjects, false);
             
             if(intersects.length > 0) {
                 const hit = intersects[0];
@@ -526,49 +470,23 @@
                 pos.divideScalar(size).floor().multiplyScalar(size).addScalar(size/2);
                 
                 placementGhost.position.copy(pos);
-                
-                // Alignment logic for planks
-                if(carriedBlock.userData.type === 'plank') {
-                     const off = size/2;
-                     if(!placementGhost.userData.r) { if(Math.round(pos.z/off)%2 !== 0) placementGhost.position.z += off; }
-                     else { if(Math.round(pos.x/off)%2 !== 0) placementGhost.position.x += off; }
-                }
-                carriedBlock.position.set(0, 8000, 0); // Hide actual block while moving
+                carriedBlock.position.set(0, 8000, 0); 
             }
-        }
-
-        function onKeyDown(e) {
-            if((e.key === 'r' || e.key === 'R') && carriedBlock && carriedBlock.userData.type === 'plank') {
-                const r = !carriedBlock.userData.r;
-                carriedBlock.userData.r = r;
-                placementGhost.userData.r = r;
-                const size = CONFIG.blockSize;
-                const g = r ? new THREE.BoxGeometry(size*2, size, size) : new THREE.BoxGeometry(size, size, size*2);
-                carriedBlock.geometry.dispose(); carriedBlock.geometry = g;
-                // Rebuild ghost edges
-                scene.remove(placementGhost);
-                const edges = new THREE.EdgesGeometry(g);
-                placementGhost = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 }));
-                placementGhost.position.copy(carriedBlock.position); // Logic placeholder
-                placementGhost.userData.r = r;
-                scene.add(placementGhost);
-            }
-            if(e.key === 'Escape' && carriedBlock) dropCarried();
         }
 
         function dropCarried() {
-            if(carriedBlock) scene.remove(carriedBlock);
+            if(!carriedBlock) return;
+            scene.remove(carriedBlock);
             if(placementGhost) scene.remove(placementGhost);
             carriedBlock = null; placementGhost = null;
             updateCursor(false);
         }
         
         function updatePointer(e) { pointer.set((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1); }
-        
         function updateCursor(active) {
             const c = document.getElementById('carrying-cursor');
             c.style.display = active ? 'block' : 'none';
-            document.body.style.cursor = active ? 'none' : 'default'; // Hide default mouse when carrying
+            document.body.style.cursor = active ? 'none' : 'default';
             if(active) {
                 const track = (e) => { c.style.left = e.clientX+15+'px'; c.style.top = e.clientY+15+'px'; };
                 document.addEventListener('pointermove', track, {once: !active});
@@ -577,18 +495,17 @@
             }
         }
 
-        // --- Application Logic (Tabs, Saves) ---
-
+        // --- System Logic ---
         function toggleTheme() {
             isDarkMode = !isDarkMode;
             document.body.className = isDarkMode ? 'dark-mode' : 'light-mode';
-            const color = isDarkMode ? CONFIG.darkSky : CONFIG.lightSky;
-            scene.background.setHex(color);
-            scene.getObjectByName('sun').intensity = isDarkMode ? 1.0 : 1.4; 
+            const col = isDarkMode ? CONFIG.skyColorDark : CONFIG.skyColorLight;
+            scene.background.setHex(col);
+            scene.fog.color.setHex(col);
         }
 
         function createNewWorld() {
-            if(worlds.length >= CONFIG.maxWorlds) return alert("Max worlds reached.");
+            if(worlds.length >= CONFIG.maxWorlds) return alert("Max 10 worlds!");
             const newWorld = { id: worldCounter++, data: [] };
             worlds.push(newWorld);
             renderTabs();
@@ -621,45 +538,42 @@
         function saveState() {
             if(!currentWorldId) return;
             const w = worlds.find(w => w.id === currentWorldId);
-            w.data = currentInteractables.map(b => ({
-                type: b.userData.type, x: b.position.x, y: b.position.y, z: b.position.z, r: b.userData.r
+            w.data = interactableObjects.map(b => ({
+                type: b.userData.type, x: b.position.x, y: b.position.y, z: b.position.z
             }));
         }
 
         function loadState(data) {
             data.forEach(d => {
-                let g; const s = CONFIG.blockSize;
-                if(d.type === 'plank') g = d.r ? new THREE.BoxGeometry(s*2, s, s) : new THREE.BoxGeometry(s, s, s*2);
-                else g = new THREE.BoxGeometry(s, s, s);
+                const s = CONFIG.blockSize;
+                const g = new THREE.BoxGeometry(s, s, s);
                 const b = new THREE.Mesh(g, materials[d.type]);
                 b.position.set(d.x, d.y, d.z);
                 b.castShadow = true; b.receiveShadow = true;
-                b.userData = {type:d.type, r:d.r};
+                b.userData = {type:d.type};
                 if(d.type==='light') b.add(new THREE.PointLight(0xffaa00, 600, 400));
                 scene.add(b);
-                currentInteractables.push(b);
-                collisionObjects.push(b);
+                interactableObjects.push(b);
+                obstacleObjects.push(b);
             });
         }
 
         function clearScene() {
             dropCarried();
-            currentInteractables.forEach(o => scene.remove(o));
-            currentInteractables = [];
-            collisionObjects = [groundPlane];
+            interactableObjects.forEach(o => scene.remove(o));
+            interactableObjects = [];
+            obstacleObjects = [groundPlane];
         }
 
         function renderTabs() {
             const container = document.getElementById('tab-container');
-            // Keep the + button
             const addBtn = container.lastElementChild;
             container.innerHTML = '';
-            
             worlds.forEach(w => {
                 const btn = document.createElement('div');
                 btn.className = `world-tab ${w.id === currentWorldId ? 'active' : ''}`;
                 btn.onclick = () => switchWorld(w.id);
-                btn.innerHTML = `Proj-${w.id} <span class="del-tab" onclick="deleteWorld(${w.id}, event)">×</span>`;
+                btn.innerHTML = `World ${w.id} <span class="del-tab" onclick="deleteWorld(${w.id}, event)">×</span>`;
                 container.appendChild(btn);
             });
             container.appendChild(addBtn);
@@ -671,7 +585,7 @@
             const blob = new Blob([JSON.stringify(w.data)], {type: 'application/json'});
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = `voxel_proj_${w.id}.json`;
+            a.download = `voxel_world_${w.id}.json`;
             a.click();
         }
 
@@ -696,9 +610,18 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        function animate() {
+        function animate(time) {
             requestAnimationFrame(animate);
             controls.update();
+            if(waterMesh) {
+                waterMesh.material.map.offset.y += 0.001;
+                waterMesh.material.map.offset.x += 0.0005;
+            }
+            scene.traverse((obj) => {
+                if(obj.name === 'nature_asset') {
+                    obj.position.y = obj.userData.baseY + Math.sin(time * 0.002 + obj.userData.bobOffset) * 2;
+                }
+            });
             renderer.render(scene, camera);
         }
     </script>
