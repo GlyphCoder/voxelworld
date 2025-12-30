@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Voxel Builder - Omni Edition</title>
+    <title>Voxel Builder - CoC Style</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap');
 
@@ -18,7 +18,7 @@
         }
 
         body.light-mode {
-            --bg-color: #87CEEB;
+            --bg-color: #87CEEB; /* Bright CoC Sky Blue */
             --ui-bg: rgba(255, 255, 255, 0.65);
             --ui-border: rgba(0,0,0,0.1);
             --text-color: #333;
@@ -134,7 +134,7 @@
         #fileInput { display: none; }
     </style>
 </head>
-<body class="dark-mode"> <div id="ui-layer">
+<body class="light-mode"> <div id="ui-layer">
         <div id="top-area">
             <button id="theme-toggle" onclick="toggleTheme()">🌗</button>
             <div id="tab-container">
@@ -190,7 +190,7 @@
             islandSize: 50, 
             waterLevel: -30,
             darkSky: 0x1a1a2e,
-            lightSky: 0x87CEEB,
+            lightSky: 0x87CEEB, // Clear CoC blue
             maxWorlds: 10
         };
 
@@ -199,7 +199,7 @@
         let raycaster, pointer;
         
         // World Management
-        let worlds = []; // Array of objects: { id: 1, data: [] }
+        let worlds = []; 
         let currentWorldId = null;
         let worldCounter = 1;
 
@@ -212,8 +212,8 @@
         let placementGhost = null; 
         const materials = {};
         
-        // Theme State
-        let isDarkMode = true;
+        // Theme State (Start in light mode)
+        let isDarkMode = false;
 
         init();
         animate();
@@ -231,29 +231,29 @@
 
         function init() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(CONFIG.darkSky);
-            scene.fog = new THREE.Fog(CONFIG.darkSky, 500, 2500);
+            // Initialize background color based on starting theme (light)
+            scene.background = new THREE.Color(CONFIG.lightSky);
+            // FOG REMOVED entirely for clear view
 
-            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 5000);
-            camera.position.set(1200, 1000, 1200);
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 8000);
+            camera.position.set(1500, 1200, 1500); // Slightly higher angle
 
-            // Optimization: No pixelRatio scaling (saves GPU)
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFShadowMap; // Faster than PCFSoft
+            renderer.shadowMap.type = THREE.PCFShadowMap;
             document.body.appendChild(renderer.domElement);
 
             setupLighting();
-            generateMaterials(); // Pixel art style
+            generateMaterials();
             createEnvironment();
 
             controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.08;
-            controls.maxPolarAngle = Math.PI / 2 - 0.05; 
+            controls.maxPolarAngle = Math.PI / 2 - 0.1; 
             controls.minDistance = 100;
-            controls.maxDistance = 3000;
+            controls.maxDistance = 4000;
             controls.mouseButtons = { LEFT: null, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
 
             raycaster = new THREE.Raycaster();
@@ -264,7 +264,6 @@
             document.addEventListener('pointermove', onPointerMove);
             document.addEventListener('keydown', onKeyDown);
 
-            // Create initial world
             createNewWorld();
         }
 
@@ -275,14 +274,14 @@
             
             const color = isDarkMode ? CONFIG.darkSky : CONFIG.lightSky;
             scene.background.setHex(color);
-            scene.fog.color.setHex(color);
+            // No fog update needed here anymore
             
-            // Adjust light intensity based on mode
             const sun = scene.getObjectByName('sun');
-            if(sun) sun.intensity = isDarkMode ? 1.5 : 2.0;
+            // Make sun brighter in light mode for crisper look
+            if(sun) sun.intensity = isDarkMode ? 1.5 : 1.8; 
         }
 
-        // --- Optimized Materials (Pixel Art) ---
+        // --- Materials (Pixel Art) ---
         function createPixelTexture(color, transparent=false) {
             const size = 64;
             const canvas = document.createElement('canvas');
@@ -290,7 +289,6 @@
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = color; ctx.fillRect(0,0,size,size);
             
-            // Simple noise
             for(let i=0; i<200; i++) {
                 ctx.fillStyle = Math.random()>0.5 ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
                 const x = Math.floor(Math.random()*size);
@@ -298,16 +296,15 @@
                 ctx.fillRect(x,y,4,4);
             }
             
-            // Border
             ctx.strokeStyle = "rgba(0,0,0,0.2)"; ctx.lineWidth = 4; ctx.strokeRect(0,0,size,size);
 
             const tex = new THREE.CanvasTexture(canvas);
-            tex.magFilter = THREE.NearestFilter; // Key for pixel look
+            tex.magFilter = THREE.NearestFilter;
+            tex.colorSpace = THREE.SRGBColorSpace; // Better colors
             return tex;
         }
 
         function generateMaterials() {
-            // Using MeshLambertMaterial for performance (not Physical)
             const mkMat = (c) => new THREE.MeshLambertMaterial({ map: createPixelTexture(c) });
             
             materials['stone'] = mkMat('#7d7d7d');
@@ -330,7 +327,6 @@
                 map: createPixelTexture('#fff3bb')
             });
 
-            // Grass
             const dirt = createPixelTexture('#5d4037');
             const grass = createPixelTexture('#58a04c');
             materials['grass'] = [
@@ -339,30 +335,31 @@
                 new THREE.MeshLambertMaterial({map: dirt}), new THREE.MeshLambertMaterial({map: dirt})
             ];
             
-            // Environment Water
             materials['sea'] = new THREE.MeshLambertMaterial({
                 color: 0x4fa4b8, transparent: true, opacity: 0.85
             });
         }
 
         function setupLighting() {
-            const amb = new THREE.AmbientLight(0xffffff, 0.6);
+            // Brighter ambient for clearer shadows
+            const amb = new THREE.AmbientLight(0xffffff, 0.8);
             scene.add(amb);
             
-            const sun = new THREE.DirectionalLight(0xfff5e1, 1.5);
+            // Brighter sun for crispness
+            const sun = new THREE.DirectionalLight(0xfff5e1, 1.8);
             sun.name = 'sun';
-            sun.position.set(500, 1000, 500);
+            sun.position.set(800, 1500, 800);
             sun.castShadow = true;
-            sun.shadow.mapSize.set(2048, 2048); // Reduced from 4096
-            sun.shadow.camera.far = 3500;
-            const d = 1500;
+            sun.shadow.mapSize.set(2048, 2048);
+            sun.shadow.camera.far = 4000;
+            const d = 2000;
             sun.shadow.camera.left = -d; sun.shadow.camera.right = d;
             sun.shadow.camera.top = d; sun.shadow.camera.bottom = -d;
             scene.add(sun);
         }
 
         function createEnvironment() {
-            // Platform
+            // Main Island Platform
             const size = CONFIG.blockSize * CONFIG.islandSize;
             const geo = new THREE.BoxGeometry(size, CONFIG.blockSize, size);
             groundPlane = new THREE.Mesh(geo, materials['grass']);
@@ -370,27 +367,17 @@
             groundPlane.receiveShadow = true;
             scene.add(groundPlane);
 
-            // Water Plane
-            const wGeo = new THREE.PlaneGeometry(8000, 8000);
+            // Infinite Water Plane
+            const wGeo = new THREE.PlaneGeometry(10000, 10000);
             waterMesh = new THREE.Mesh(wGeo, materials['sea']);
             waterMesh.rotation.x = -Math.PI/2;
             waterMesh.position.y = CONFIG.waterLevel;
             scene.add(waterMesh);
 
-            // Mountains Only
-            const mtnMat = new THREE.MeshLambertMaterial({color: 0x5a6e8c});
-            for(let i=0; i<30; i++) {
-                const angle = Math.random() * Math.PI * 2;
-                const dist = size/2 + 600 + Math.random()*1500;
-                const h = 800 + Math.random()*1000;
-                const r = 600 + Math.random()*600;
-                const cone = new THREE.Mesh(new THREE.ConeGeometry(r, h, 5), mtnMat);
-                cone.position.set(Math.cos(angle)*dist, h/2 - 100, Math.sin(angle)*dist);
-                scene.add(cone);
-            }
+            // MOUNTAINS REMOVED entirely for clean CoC look
         }
 
-        // --- Interaction ---
+        // --- Interaction (Click-Carry-Place) ---
         function startPlacing(type) {
             if(carriedBlock) dropCarried();
             const size = CONFIG.blockSize;
@@ -461,13 +448,12 @@
                 
                 placementGhost.position.copy(pos);
                 
-                // Alignment for beams
                 if(carriedBlock.userData.type === 'plank') {
                      const off = size/2;
                      if(!placementGhost.userData.r) { if(Math.round(pos.z/off)%2 !== 0) placementGhost.position.z += off; }
                      else { if(Math.round(pos.x/off)%2 !== 0) placementGhost.position.x += off; }
                 }
-                carriedBlock.position.set(0, 5000, 0); // Hide carrying block
+                carriedBlock.position.set(0, 8000, 0);
             }
         }
 
@@ -502,7 +488,7 @@
             }
         }
 
-        // --- Multi-World Logic ---
+        // --- World Logic ---
 
         function saveCurrentWorldState() {
             if(currentWorldId === null) return;
@@ -530,9 +516,8 @@
             const idx = worlds.findIndex(w => w.id === id);
             worlds.splice(idx, 1);
             
-            // If we deleted the active world, switch to the first available
             if(currentWorldId === id) {
-                currentInteractables.forEach(o => scene.remove(o)); // Clear visuals
+                currentInteractables.forEach(o => scene.remove(o));
                 currentInteractables = [];
                 switchWorld(worlds[0].id);
             } else {
@@ -544,7 +529,6 @@
             if(currentWorldId === id) return;
             saveCurrentWorldState();
             
-            // Clear Scene
             dropCarried();
             currentInteractables.forEach(o => scene.remove(o));
             currentInteractables = [];
@@ -552,7 +536,6 @@
 
             currentWorldId = id;
             
-            // Load New
             const worldObj = worlds.find(w => w.id === id);
             worldObj.data.forEach(d => {
                 let g; const s = CONFIG.blockSize;
@@ -576,7 +559,7 @@
         function renderTabs() {
             const container = document.getElementById('tab-container');
             const addBtn = document.getElementById('add-tab-btn');
-            container.innerHTML = ''; // clear
+            container.innerHTML = '';
             
             worlds.forEach(w => {
                 const btn = document.createElement('div');
@@ -609,7 +592,6 @@
                     currentInteractables.forEach(o => scene.remove(o));
                     currentInteractables = [];
                     collisionObjects = [groundPlane];
-                    // Load straight into current world
                     data.forEach(d => {
                         let g; const s = CONFIG.blockSize;
                         if(d.type === 'plank') g = d.r ? new THREE.BoxGeometry(s*2, s, s) : new THREE.BoxGeometry(s, s, s*2);
