@@ -148,9 +148,9 @@
         </div>
 
         <div id="instructions">
-            🖱️ <b>Click Block</b>: Pick Up<br>
-            🖱️ <b>Click Empty</b>: Place<br>
-            🖱️ <b>Right Drag</b>: Rotate Cam<br>
+            🖱️ <b>Left Drag</b>: Rotate Cam<br>
+            🖱️ <b>Left Click</b>: Pick/Place<br>
+            ⌨️ <b>WASD / Arrow</b>: Move<br>
             🗑️ <b>Click Red Bin</b>: Delete<br>
             ⌨️ <b>ESC Key</b>: Cancel
         </div>
@@ -181,7 +181,7 @@
         // --- Configuration ---
         const CONFIG = {
             blockSize: 50,
-            islandSize: 60, // Significantly Larger Platform
+            islandSize: 60,
             waterLevel: -25,
             skyColorLight: 0xa8d9ef,
             skyColorDark: 0x1a1a2e,
@@ -194,7 +194,7 @@
             { id: 'stone', label: 'Stone', color: '#7d7d7d', noise: true },
             { id: 'wood', label: 'Log', color: '#8b5a2b', noise: true },
             { id: 'brick', label: 'Brick', color: '#a04c4c', noise: true },
-            { id: 'plank_cube', label: 'Wood', color: '#d2a679', noise: false }, // Renamed from plank, made cube
+            { id: 'plank_cube', label: 'Wood', color: '#d2a679', noise: false }, 
             { id: 'glass', label: 'Glass', color: '#aed9e0', noise: false, opacity: 0.5 },
             { id: 'waterBlock', label: 'Water', color: '#4fa4b8', noise: false, opacity: 0.7 },
             { id: 'light', label: 'Lamp', color: '#fff3bb', noise: false, emissive: true }
@@ -216,6 +216,14 @@
         const materials = {};
         let isDarkMode = false;
 
+        // Input state for distinction between Click and Drag
+        let mouseDownTime = 0;
+        let mouseDownPos = new THREE.Vector2();
+        const CLICK_THRESHOLD_PX = 5; 
+        
+        // Movement Keys
+        const keysPressed = {};
+
         init();
         animate();
 
@@ -234,10 +242,10 @@
         function init() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(CONFIG.skyColorLight);
-            scene.fog = new THREE.Fog(CONFIG.skyColorLight, 500, 3500);
+            // FOG REMOVED as requested
 
             camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 8000);
-            camera.position.set(1600, 1400, 1600); // Zoomed out for bigger island
+            camera.position.set(1600, 1400, 1600);
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -255,15 +263,37 @@
             controls.maxPolarAngle = Math.PI / 2 - 0.1;
             controls.minDistance = 200;
             controls.maxDistance = 4000;
-            controls.mouseButtons = { LEFT: null, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
+            
+            // CHANGED: LEFT is now Rotate
+            controls.mouseButtons = { 
+                LEFT: THREE.MOUSE.ROTATE, 
+                MIDDLE: THREE.MOUSE.DOLLY, 
+                RIGHT: THREE.MOUSE.PAN 
+            };
 
             raycaster = new THREE.Raycaster();
             pointer = new THREE.Vector2();
 
             window.addEventListener('resize', onWindowResize);
-            document.addEventListener('pointerdown', onPointerDown);
+            
+            // CHANGED: Tracking interactions to distinguish drag vs click
+            document.addEventListener('pointerdown', (e) => {
+                mouseDownTime = Date.now();
+                mouseDownPos.set(e.clientX, e.clientY);
+            });
+            document.addEventListener('pointerup', onPointerUp);
             document.addEventListener('pointermove', onPointerMove);
-            document.addEventListener('keydown', (e) => { if(e.key==='Escape') dropCarried(); });
+            
+            // CHANGED: Keyboard listeners
+            document.addEventListener('keydown', (e) => { 
+                if(e.key==='Escape') dropCarried();
+                keysPressed[e.key.toLowerCase()] = true;
+                if(e.key.startsWith('Arrow')) keysPressed[e.key] = true;
+            });
+            document.addEventListener('keyup', (e) => {
+                keysPressed[e.key.toLowerCase()] = false;
+                if(e.key.startsWith('Arrow')) keysPressed[e.key] = false;
+            });
 
             createNewWorld();
         }
@@ -272,7 +302,6 @@
             const hotbar = document.getElementById('hotbar');
             
             BLOCK_TYPES.forEach(block => {
-                // Texture Gen
                 const canvas = document.createElement('canvas');
                 canvas.width = 64; canvas.height = 64;
                 const ctx = canvas.getContext('2d');
@@ -292,7 +321,6 @@
                 const tex = new THREE.CanvasTexture(canvas);
                 tex.magFilter = THREE.NearestFilter; tex.colorSpace = THREE.SRGBColorSpace;
                 
-                // Material Creation
                 const matParams = { map: tex };
                 if(block.opacity) { matParams.transparent = true; matParams.opacity = block.opacity; }
                 if(block.emissive) { matParams.emissive = block.color; matParams.emissiveIntensity = 0.5; }
@@ -312,7 +340,6 @@
                     materials[block.id] = new THREE.MeshLambertMaterial(matParams);
                 }
 
-                // UI Icon
                 const container = document.createElement('div');
                 container.className = 'slot-container';
                 container.onclick = () => spawnBlock(block.id);
@@ -330,7 +357,6 @@
                 hotbar.appendChild(container);
             });
 
-            // Water material
             const c = document.createElement('canvas'); c.width=64; c.height=64;
             const ctx = c.getContext('2d'); ctx.fillStyle='#29b6f6'; ctx.fillRect(0,0,64,64);
             for(let i=0;i<50;i++){ ctx.fillStyle='rgba(255,255,255,0.2)'; ctx.fillRect(Math.random()*60, Math.random()*60, 8,2); }
@@ -351,7 +377,6 @@
         }
 
         function createEnvironment() {
-            // Big Water Plane
             const waterGeo = new THREE.PlaneGeometry(8000, 8000);
             waterGeo.rotateX(-Math.PI / 2);
             const waterTex = materials['water'].map;
@@ -361,7 +386,6 @@
             waterMesh.position.y = -20;
             scene.add(waterMesh);
 
-            // Large Island Base
             const size = CONFIG.blockSize * CONFIG.islandSize;
             const islandGeo = new THREE.BoxGeometry(size, CONFIG.blockSize, size);
             groundPlane = new THREE.Mesh(islandGeo, materials['grass']);
@@ -374,7 +398,7 @@
         }
 
         function generateNature(islandWidth) {
-            const count = 50; // More trees for bigger island
+            const count = 50; 
             const minDist = islandWidth / 2 + 100;
             const maxDist = islandWidth / 2 + 1000;
             const trunkGeo = new THREE.BoxGeometry(30, 60, 30);
@@ -405,7 +429,6 @@
         function spawnBlock(type) {
             if(carriedBlock) dropCarried();
             const size = CONFIG.blockSize;
-            // Everything is a cube now
             const geo = new THREE.BoxGeometry(size, size, size);
             
             carriedBlock = new THREE.Mesh(geo, materials[type]);
@@ -423,9 +446,14 @@
             updateCursor(true);
         }
 
-        function onPointerDown(e) {
+        // CHANGED: Logic moved to PointerUp to distinguish Click vs Drag
+        function onPointerUp(e) {
             if(e.button !== 0 || e.target.closest('#ui-layer button') || e.target.closest('.slot-container') || e.target.closest('#trash')) return;
-            
+
+            // Check if mouse moved significantly
+            const dist = Math.hypot(e.clientX - mouseDownPos.x, e.clientY - mouseDownPos.y);
+            if(dist > CLICK_THRESHOLD_PX) return; // Is a Drag, ignore click
+
             updatePointer(e);
             raycaster.setFromCamera(pointer, camera);
 
@@ -501,7 +529,6 @@
             document.body.className = isDarkMode ? 'dark-mode' : 'light-mode';
             const col = isDarkMode ? CONFIG.skyColorDark : CONFIG.skyColorLight;
             scene.background.setHex(col);
-            scene.fog.color.setHex(col);
         }
 
         function createNewWorld() {
@@ -610,8 +637,35 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
+        function handleMovement() {
+            const moveSpeed = 20;
+            
+            // Get Camera Direction (Projected to flat plane)
+            const forward = new THREE.Vector3();
+            camera.getWorldDirection(forward);
+            forward.y = 0;
+            forward.normalize();
+
+            const right = new THREE.Vector3();
+            right.crossVectors(camera.up, forward).normalize(); // Calculate right relative to forward
+
+            const moveVec = new THREE.Vector3();
+
+            if (keysPressed['w'] || keysPressed['arrowup']) moveVec.add(forward);
+            if (keysPressed['s'] || keysPressed['arrowdown']) moveVec.sub(forward);
+            if (keysPressed['d'] || keysPressed['arrowright']) moveVec.sub(right); // Three.js coordinate system quirk
+            if (keysPressed['a'] || keysPressed['arrowleft']) moveVec.add(right);
+
+            if (moveVec.length() > 0) {
+                moveVec.normalize().multiplyScalar(moveSpeed);
+                camera.position.add(moveVec);
+                controls.target.add(moveVec); // Move target with camera so we don't spin around old point
+            }
+        }
+
         function animate(time) {
             requestAnimationFrame(animate);
+            handleMovement(); // CHANGED: Process WASD keys
             controls.update();
             if(waterMesh) {
                 waterMesh.material.map.offset.y += 0.001;
