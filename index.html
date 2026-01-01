@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Voxel Builder - Big Platform</title>
+    <title>Voxel Builder - Unlimited</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap');
 
@@ -149,10 +149,10 @@
 
         <div id="instructions">
             🖱️ <b>Left Drag</b>: Rotate Cam<br>
-            🖱️ <b>Left Click</b>: Pick/Place<br>
+            🖱️ <b>Left Click</b>: Place<br>
+            🖱️ <b>Right Click</b>: Stop Placing<br>
             ⌨️ <b>WASD / Arrow</b>: Move<br>
             🗑️ <b>Click Red Bin</b>: Delete<br>
-            ⌨️ <b>ESC Key</b>: Cancel
         </div>
 
         <div id="trash" onclick="dropCarried()">CLICK TO<br>DELETE</div>
@@ -188,7 +188,6 @@
             maxWorlds: 10
         };
 
-        // --- Block Types (Cubes Only) ---
         const BLOCK_TYPES = [
             { id: 'grass', label: 'Grass', color: '#58a04c', noise: true },
             { id: 'stone', label: 'Stone', color: '#7d7d7d', noise: true },
@@ -216,18 +215,15 @@
         const materials = {};
         let isDarkMode = false;
 
-        // Input state for distinction between Click and Drag
         let mouseDownTime = 0;
         let mouseDownPos = new THREE.Vector2();
         const CLICK_THRESHOLD_PX = 5; 
         
-        // Movement Keys
         const keysPressed = {};
 
         init();
         animate();
 
-        // Global functions
         window.spawnBlock = spawnBlock;
         window.downloadWorld = downloadWorld;
         window.triggerLoad = () => document.getElementById('fileInput').click();
@@ -238,11 +234,12 @@
         window.dropCarried = dropCarried;
 
         document.getElementById('fileInput').addEventListener('change', handleFileLoad, false);
+        // CHANGED: Disable default Context Menu
+        document.addEventListener('contextmenu', event => event.preventDefault());
 
         function init() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(CONFIG.skyColorLight);
-            // FOG REMOVED as requested
 
             camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 8000);
             camera.position.set(1600, 1400, 1600);
@@ -263,8 +260,6 @@
             controls.maxPolarAngle = Math.PI / 2 - 0.1;
             controls.minDistance = 200;
             controls.maxDistance = 4000;
-            
-            // CHANGED: LEFT is now Rotate
             controls.mouseButtons = { 
                 LEFT: THREE.MOUSE.ROTATE, 
                 MIDDLE: THREE.MOUSE.DOLLY, 
@@ -276,15 +271,21 @@
 
             window.addEventListener('resize', onWindowResize);
             
-            // CHANGED: Tracking interactions to distinguish drag vs click
+            // Interaction Listeners
             document.addEventListener('pointerdown', (e) => {
+                // CHANGED: Check for Right Click (Button 2) to cancel
+                if(e.button === 2 && carriedBlock) {
+                    dropCarried();
+                    return;
+                }
+                
                 mouseDownTime = Date.now();
                 mouseDownPos.set(e.clientX, e.clientY);
             });
+
             document.addEventListener('pointerup', onPointerUp);
             document.addEventListener('pointermove', onPointerMove);
             
-            // CHANGED: Keyboard listeners
             document.addEventListener('keydown', (e) => { 
                 if(e.key==='Escape') dropCarried();
                 keysPressed[e.key.toLowerCase()] = true;
@@ -425,7 +426,6 @@
             }
         }
 
-        // --- Interaction ---
         function spawnBlock(type) {
             if(carriedBlock) dropCarried();
             const size = CONFIG.blockSize;
@@ -446,28 +446,35 @@
             updateCursor(true);
         }
 
-        // CHANGED: Logic moved to PointerUp to distinguish Click vs Drag
         function onPointerUp(e) {
+            // Ignore right click up (handled in pointerdown)
             if(e.button !== 0 || e.target.closest('#ui-layer button') || e.target.closest('.slot-container') || e.target.closest('#trash')) return;
 
-            // Check if mouse moved significantly
             const dist = Math.hypot(e.clientX - mouseDownPos.x, e.clientY - mouseDownPos.y);
-            if(dist > CLICK_THRESHOLD_PX) return; // Is a Drag, ignore click
+            if(dist > CLICK_THRESHOLD_PX) return; // Drag detected
 
             updatePointer(e);
             raycaster.setFromCamera(pointer, camera);
 
             if(carriedBlock) {
-                // Place
+                // CHANGED: INFINITE PLACEMENT
                 const intersects = raycaster.intersectObjects(obstacleObjects, false);
                 if(intersects.length > 0) {
-                    carriedBlock.position.copy(placementGhost.position);
-                    interactableObjects.push(carriedBlock);
-                    obstacleObjects.push(carriedBlock);
-                    carriedBlock = null;
-                    scene.remove(placementGhost);
-                    placementGhost = null;
-                    updateCursor(false);
+                    // Clone the block instead of moving the carried one
+                    const newBlock = carriedBlock.clone(); 
+                    newBlock.position.copy(placementGhost.position);
+                    
+                    // Clone ignores light children sometimes, ensure light is added if needed
+                    if(newBlock.userData.type === 'light') {
+                         newBlock.clear(); // remove any children copied incorrectly
+                         newBlock.add(new THREE.PointLight(0xffaa00, 600, 400));
+                    }
+
+                    interactableObjects.push(newBlock);
+                    obstacleObjects.push(newBlock);
+                    scene.add(newBlock);
+                    
+                    // Do NOT nullify carriedBlock, keep it for next click
                 }
             } else {
                 // Pick Up
@@ -475,6 +482,7 @@
                 if(intersects.length > 0) {
                     const target = intersects[0].object;
                     carriedBlock = target;
+                    // Remove from world so we can move it
                     interactableObjects = interactableObjects.filter(o => o !== target);
                     obstacleObjects = obstacleObjects.filter(o => o !== target);
                     
@@ -639,33 +647,30 @@
 
         function handleMovement() {
             const moveSpeed = 20;
-            
-            // Get Camera Direction (Projected to flat plane)
             const forward = new THREE.Vector3();
             camera.getWorldDirection(forward);
             forward.y = 0;
             forward.normalize();
 
             const right = new THREE.Vector3();
-            right.crossVectors(camera.up, forward).normalize(); // Calculate right relative to forward
+            right.crossVectors(camera.up, forward).normalize();
 
             const moveVec = new THREE.Vector3();
-
             if (keysPressed['w'] || keysPressed['arrowup']) moveVec.add(forward);
             if (keysPressed['s'] || keysPressed['arrowdown']) moveVec.sub(forward);
-            if (keysPressed['d'] || keysPressed['arrowright']) moveVec.sub(right); // Three.js coordinate system quirk
+            if (keysPressed['d'] || keysPressed['arrowright']) moveVec.sub(right);
             if (keysPressed['a'] || keysPressed['arrowleft']) moveVec.add(right);
 
             if (moveVec.length() > 0) {
                 moveVec.normalize().multiplyScalar(moveSpeed);
                 camera.position.add(moveVec);
-                controls.target.add(moveVec); // Move target with camera so we don't spin around old point
+                controls.target.add(moveVec);
             }
         }
 
         function animate(time) {
             requestAnimationFrame(animate);
-            handleMovement(); // CHANGED: Process WASD keys
+            handleMovement();
             controls.update();
             if(waterMesh) {
                 waterMesh.material.map.offset.y += 0.001;
