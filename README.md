@@ -8,7 +8,7 @@
 
 A lightweight, browser-based 3D voxel sandbox featuring procedural environments, dynamic time-of-day lighting, and a custom built-in Neural Network for generating instant architectural structures.
 
-[**Explore the Demo**](#) <img src="voxelworld/screenshot.png" alt="Voxel Builder Screenshot" width="100%">
+[**Explore the Demo**](#) <img src="/Users/bhavyashah/Desktop/Coding/htmlcssjs/voxelworld/screenshot.png alt="Voxel Builder Screenshot" width="100%">
 
 </div>
 
