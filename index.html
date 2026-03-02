@@ -8,7 +8,6 @@
 
         :root {
             --bg-color: #333;
-            --sky-color: #a8d9ef;
             --ui-bg: rgba(255, 255, 255, 0.2);
             --slot-bg: #444;
             --slot-border: #555;
@@ -19,7 +18,6 @@
 
         body.dark-mode {
             --bg-color: #1a1a2e;
-            --sky-color: #1a1a2e;
             --ui-bg: rgba(0, 0, 0, 0.4);
             --slot-bg: #2a2a2a;
             --slot-border: #444;
@@ -28,7 +26,7 @@
             --btn-text: #fff;
         }
 
-        body { margin: 0; overflow: hidden; font-family: 'Fredoka', sans-serif; user-select: none; background: var(--sky-color); transition: background 0.3s; }
+        body { margin: 0; overflow: hidden; font-family: 'Fredoka', sans-serif; user-select: none; background: #000; transition: background 0.3s; }
         
         /* UI Overlay */
         #ui-layer {
@@ -41,9 +39,28 @@
             display: flex; gap: 10px; pointer-events: auto; align-items: center;
         }
 
+        /* Time Slider UI */
+        #time-control {
+            display: flex; align-items: center; gap: 10px;
+            background: rgba(0,0,0,0.3); padding: 6px 15px; border-radius: 30px;
+            backdrop-filter: blur(4px); box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        #time-control span { color: white; font-size: 14px; font-weight: bold; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+        input[type=range] {
+            -webkit-appearance: none; width: 120px; background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%;
+            background: #FFD54F; cursor: pointer; margin-top: -6px; box-shadow: 0 0 10px rgba(255, 213, 79, 0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer; background: rgba(255,255,255,0.3); border-radius: 2px;
+        }
+
         /* World Tabs */
         #tab-container {
-            display: flex; gap: 8px; margin-left: 20px;
+            display: flex; gap: 8px; margin-left: 10px;
             background: rgba(0,0,0,0.2); padding: 5px; border-radius: 30px;
             backdrop-filter: blur(4px);
         }
@@ -73,6 +90,42 @@
         }
         button.btn:active { transform: translateY(4px); box-shadow: 0 0 0 #999, inset 0 2px 5px rgba(0,0,0,0.1); }
         button.btn.primary { background: #4CAF50; color: white; box-shadow: 0 4px 0 #2E7D32; }
+        button.btn.magic { background: #9c27b0; color: white; box-shadow: 0 4px 0 #6a1b9a; }
+
+        /* ML Modal */
+        #gen-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); z-index: 200;
+            align-items: center; justify-content: center; pointer-events: auto;
+        }
+        .modal-content {
+            background: var(--bg-color); padding: 30px; border-radius: 20px;
+            text-align: center; color: var(--text-color); box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            width: 500px;
+        }
+        .modal-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px;
+        }
+        .modal-grid button {
+            padding: 15px 5px; font-size: 15px; background: var(--slot-bg); color: var(--text-color);
+            border: 2px solid var(--slot-border); border-radius: 12px; cursor: pointer;
+            transition: all 0.2s; font-family: inherit; font-weight: 600;
+        }
+        .modal-grid button:hover { background: #4CAF50; border-color: #2E7D32; color: white; transform: scale(1.05); }
+        .modal-grid button.abstract-btn { background: #283593; border-color: #1a237e; color: #fff; }
+        .modal-grid button.abstract-btn:hover { background: #3f51b5; transform: scale(1.1) rotate(2deg); }
+        
+        #gen-progress-wrapper {
+            display: none; margin-top: 25px;
+        }
+        .progress-track {
+            width: 100%; height: 20px; background: rgba(0,0,0,0.3); border-radius: 10px; overflow: hidden;
+            border: 2px solid var(--slot-border);
+        }
+        .progress-fill {
+            height: 100%; width: 0%; background: linear-gradient(90deg, #9c27b0, #e1bee7);
+            transition: width 0.1s linear;
+        }
 
         /* Instructions */
         #instructions {
@@ -140,8 +193,14 @@
         <div id="top-bar">
             <button class="btn" onclick="downloadWorld()">💾 Save</button>
             <button class="btn" onclick="triggerLoad()">📂 Load</button>
-            <button class="btn primary" onclick="toggleTheme()">🌗 Theme</button>
+            <button class="btn magic" onclick="openGenModal()">✨ Generate</button>
             
+            <div id="time-control">
+                <span>⏱️</span>
+                <input type="range" id="timeSlider" min="0" max="24" step="0.1" value="14">
+                <span id="timeDisplay" style="width: 42px;">14:00</span>
+            </div>
+
             <div id="tab-container">
                 <button class="world-tab" onclick="createNewWorld()" style="padding: 5px 10px;">+</button>
             </div>
@@ -157,10 +216,37 @@
 
         <div id="trash" onclick="dropCarried()">CLICK TO<br>DELETE</div>
 
-        <div id="hotbar">
-            </div>
+        <div id="hotbar"></div>
 
         <div id="carrying-cursor">📦</div>
+    </div>
+
+    <div id="gen-modal">
+        <div class="modal-content">
+            <h2 style="margin-top:0;">Neural Structure Gen</h2>
+            <p style="font-size: 14px; opacity: 0.8;">Select an architecture. The embedded ANN will interpret a random latent vector to build unique variations. <br/><b>Select 'Abstract' for a 100% unique alien structure every time.</b></p>
+            
+            <div id="gen-options" class="modal-grid">
+                <button onclick="startANN('Tower')">🏰 Tower</button>
+                <button onclick="startANN('House')">🏠 House</button>
+                <button onclick="startANN('Castle')">🏯 Castle</button>
+                <button onclick="startANN('Temple')">🏛️ Temple</button>
+                <button onclick="startANN('Bridge')">🌉 Bridge</button>
+                <button onclick="startANN('Pyramid')">🛕 Pyramid</button>
+                <button onclick="startANN('Skyscraper')">🏢 Skyscraper</button>
+                <button onclick="startANN('Ruin')">🏚️ Ruin</button>
+                <button class="abstract-btn" onclick="startANN('Abstract')">🌀 Abstract</button>
+            </div>
+
+            <div id="gen-progress-wrapper">
+                <div style="margin-bottom: 10px; font-weight: bold; color: #9c27b0;">ANN Computing Tensors...</div>
+                <div class="progress-track">
+                    <div id="gen-progress-bar" class="progress-fill"></div>
+                </div>
+            </div>
+            
+            <button class="btn" onclick="closeGenModal()" style="margin-top: 20px; width: 100%;">Cancel</button>
+        </div>
     </div>
 
     <input type="file" id="fileInput" accept=".json">
@@ -177,14 +263,13 @@
     <script type="module">
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { Sky } from 'three/addons/objects/Sky.js';
 
         // --- Configuration ---
         const CONFIG = {
             blockSize: 50,
             islandSize: 60,
             waterLevel: -25,
-            skyColorLight: 0xa8d9ef,
-            skyColorDark: 0x1a1a2e,
             maxWorlds: 10
         };
 
@@ -195,12 +280,13 @@
             { id: 'brick', label: 'Brick', color: '#a04c4c', noise: true },
             { id: 'plank_cube', label: 'Wood', color: '#d2a679', noise: false }, 
             { id: 'glass', label: 'Glass', color: '#aed9e0', noise: false, opacity: 0.5 },
-            { id: 'waterBlock', label: 'Water', color: '#4fa4b8', noise: false, opacity: 0.7 },
+            { id: 'waterBlock', label: 'Water', color: '#27688c', noise: false, opacity: 0.8 },
             { id: 'light', label: 'Lamp', color: '#fff3bb', noise: false, emissive: true }
         ];
 
         let camera, scene, renderer, controls;
         let groundPlane, waterMesh;
+        let sky, sunSphere, dirLight, ambientLight;
         let raycaster, pointer;
         
         let worlds = [];
@@ -213,7 +299,6 @@
         let carriedBlock = null; 
         let placementGhost = null; 
         const materials = {};
-        let isDarkMode = false;
 
         let mouseDownTime = 0;
         let mouseDownPos = new THREE.Vector2();
@@ -221,45 +306,115 @@
         
         const keysPressed = {};
 
+        // --- ML SYSTEM (No External API) ---
+        function splitmix32(a) {
+            return function() {
+              a |= 0; a = a + 0x9e3779b9 | 0;
+              let t = a ^ a >>> 16; t = Math.imul(t, 0x21f0aaad);
+              t = t ^ t >>> 15; t = Math.imul(t, 0x735a2d97);
+              return ((t = t ^ t >>> 15) >>> 0) / 4294967296;
+            }
+        }
+
+        const mlWeights = {};
+        const structTypes = ['Tower', 'House', 'Castle', 'Temple', 'Bridge', 'Pyramid', 'Skyscraper', 'Ruin', 'Abstract'];
+        
+        structTypes.forEach((type, idx) => {
+            const rng = splitmix32(1000 + idx * 55); 
+            mlWeights[type] = {
+                w1: Array.from({length: 16}, () => Array.from({length: 24}, () => rng() * 2 - 1)),
+                b1: Array.from({length: 24}, () => rng() * 2 - 1),
+                w2: Array.from({length: 24}, () => Array.from({length: 48}, () => rng() * 2 - 1)),
+                b2: Array.from({length: 48}, () => rng() * 2 - 1)
+            };
+        });
+
+        function relu(x) { return Math.max(0, x); }
+
+        function runForwardPass(latent, type) {
+            const w = mlWeights[type];
+            let h1 = new Array(24).fill(0);
+            for(let i=0; i<24; i++) {
+                let sum = w.b1[i];
+                for(let j=0; j<16; j++) sum += latent[j] * w.w1[j][i];
+                h1[i] = relu(sum);
+            }
+            let h2 = new Array(48).fill(0);
+            for(let i=0; i<48; i++) {
+                let sum = w.b2[i];
+                for(let j=0; j<24; j++) sum += h1[j] * w.w2[j][i];
+                h2[i] = relu(sum); 
+            }
+            return h2;
+        }
+
+        // --- Window bindings ---
         init();
         animate();
 
         window.spawnBlock = spawnBlock;
         window.downloadWorld = downloadWorld;
         window.triggerLoad = () => document.getElementById('fileInput').click();
-        window.toggleTheme = toggleTheme;
         window.createNewWorld = createNewWorld;
         window.switchWorld = switchWorld;
         window.deleteWorld = deleteWorld;
         window.dropCarried = dropCarried;
+        
+        window.openGenModal = () => document.getElementById('gen-modal').style.display = 'flex';
+        window.closeGenModal = () => {
+            document.getElementById('gen-modal').style.display = 'none';
+            document.getElementById('gen-options').style.display = 'grid';
+            document.getElementById('gen-progress-wrapper').style.display = 'none';
+        };
+        window.startANN = (type) => {
+            document.getElementById('gen-options').style.display = 'none';
+            document.getElementById('gen-progress-wrapper').style.display = 'block';
+            let bar = document.getElementById('gen-progress-bar');
+            bar.style.width = '0%';
+            let progress = 0;
+            
+            let interval = setInterval(() => {
+                progress += Math.random() * 20 + 10;
+                bar.style.width = Math.min(progress, 100) + '%';
+                if(progress >= 100) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        executeMLGeneration(type);
+                        window.closeGenModal();
+                    }, 300);
+                }
+            }, 100);
+        };
 
         document.getElementById('fileInput').addEventListener('change', handleFileLoad, false);
-        // CHANGED: Disable default Context Menu
+        document.getElementById('timeSlider').addEventListener('input', (e) => updateTimeOfDay(parseFloat(e.target.value)));
         document.addEventListener('contextmenu', event => event.preventDefault());
 
         function init() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(CONFIG.skyColorLight);
+            scene.fog = new THREE.FogExp2(0xe6ded1, 0.00015);
 
-            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 8000);
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 40000);
             camera.position.set(1600, 1400, 1600);
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 0.6;
             document.body.appendChild(renderer.domElement);
 
-            setupLighting();
+            setupLightingAndSky();
             generateMaterialsAndUI();
             createEnvironment();
 
             controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.05;
-            controls.maxPolarAngle = Math.PI / 2 - 0.1;
+            controls.maxPolarAngle = Math.PI / 2 - 0.02; 
             controls.minDistance = 200;
-            controls.maxDistance = 4000;
+            controls.maxDistance = 6000;
             controls.mouseButtons = { 
                 LEFT: THREE.MOUSE.ROTATE, 
                 MIDDLE: THREE.MOUSE.DOLLY, 
@@ -271,14 +426,8 @@
 
             window.addEventListener('resize', onWindowResize);
             
-            // Interaction Listeners
             document.addEventListener('pointerdown', (e) => {
-                // CHANGED: Check for Right Click (Button 2) to cancel
-                if(e.button === 2 && carriedBlock) {
-                    dropCarried();
-                    return;
-                }
-                
+                if(e.button === 2 && carriedBlock) { dropCarried(); return; }
                 mouseDownTime = Date.now();
                 mouseDownPos.set(e.clientX, e.clientY);
             });
@@ -297,6 +446,118 @@
             });
 
             createNewWorld();
+        }
+
+        function setupLightingAndSky() {
+            ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+
+            dirLight = new THREE.DirectionalLight(0xfff0dd, 1.5);
+            dirLight.name = 'sun';
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.set(2048, 2048);
+            dirLight.shadow.camera.near = 10;
+            dirLight.shadow.camera.far = 10000;
+            dirLight.shadow.camera.left = -3000;
+            dirLight.shadow.camera.right = 3000;
+            dirLight.shadow.camera.top = 3000;
+            dirLight.shadow.camera.bottom = -3000;
+            scene.add(dirLight);
+
+            sky = new Sky();
+            sky.scale.setScalar( 30000 );
+            scene.add( sky );
+
+            const skyUniforms = sky.material.uniforms;
+            skyUniforms[ 'turbidity' ].value = 4.0;
+            skyUniforms[ 'rayleigh' ].value = 1.2;
+            skyUniforms[ 'mieCoefficient' ].value = 0.005;
+            skyUniforms[ 'mieDirectionalG' ].value = 0.8;
+
+            sunSphere = new THREE.Vector3();
+            updateTimeOfDay(14); // Initialize at 14:00 (2:00 PM)
+        }
+
+        function updateTimeOfDay(hours) {
+            // Update UI
+            const hrs = Math.floor(hours);
+            const mins = Math.floor((hours - hrs) * 60);
+            document.getElementById('timeDisplay').innerText = `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+
+            // Calculate Sun Angle
+            // 6AM = 0, 12PM = PI/2, 6PM = PI
+            const angle = ((hours - 6) / 12) * Math.PI; 
+            const distance = 4000;
+            
+            const sunX = Math.cos(angle) * distance;
+            const sunY = Math.sin(angle) * distance;
+            const sunZ = -1500;
+            
+            sunSphere.set(sunX, sunY, sunZ);
+            sky.material.uniforms['sunPosition'].value.copy(sunSphere);
+
+            // Normalized elevation (-1 midnight, 0 horizon, 1 noon)
+            const elevation = Math.sin(angle); 
+            
+            // Define Key Colors for Gradient Interpolation
+            const colorNoon = new THREE.Color(0xffffff);
+            const colorSunset = new THREE.Color(0xffaa55);
+            const colorNight = new THREE.Color(0xaaccff);
+            
+            const fogNoon = new THREE.Color(0xe6ded1);
+            const fogSunset = new THREE.Color(0xff8844);
+            const fogNight = new THREE.Color(0x0a0c16);
+            
+            const ambNoon = new THREE.Color(0xffffff);
+            const ambSunset = new THREE.Color(0xaa8888);
+            const ambNight = new THREE.Color(0x556688);
+
+            let sunColor = new THREE.Color();
+            let fogColor = new THREE.Color();
+            let ambColor = new THREE.Color();
+            
+            let dirIntensity, ambientIntensity, exposure;
+
+            if (elevation >= 0) {
+                // Daytime (Horizon to Noon)
+                let f = Math.min(1, elevation * 3); // Quick transition after sunrise
+                
+                sunColor.lerpColors(colorSunset, colorNoon, f);
+                fogColor.lerpColors(fogSunset, fogNoon, f);
+                ambColor.lerpColors(ambSunset, ambNoon, f);
+                
+                dirIntensity = 0.2 + 1.3 * f;
+                ambientIntensity = 0.3 + 0.2 * f;
+                exposure = 0.4 + 0.2 * f;
+                
+                dirLight.position.set(sunX, sunY, sunZ);
+            } else {
+                // Nighttime (Horizon to Midnight)
+                let f = Math.min(1, -elevation * 3); 
+                
+                sunColor.lerpColors(colorSunset, colorNight, f);
+                fogColor.lerpColors(fogSunset, fogNight, f);
+                ambColor.lerpColors(ambSunset, ambNight, f);
+                
+                dirIntensity = 0.2 + 0.6 * f; // Moon is slightly dimmer than sun
+                ambientIntensity = 0.3 + 0.2 * f;
+                exposure = 0.4 + 0.3 * f;
+                
+                // Flip light to opposite side of world to act as moon casting shadows
+                dirLight.position.set(-sunX, Math.max(100, -sunY), -sunZ);
+            }
+
+            // Apply Continuous Variables
+            dirLight.color.copy(sunColor);
+            scene.fog.color.copy(fogColor);
+            ambientLight.color.copy(ambColor);
+            
+            dirLight.intensity = dirIntensity;
+            ambientLight.intensity = ambientIntensity;
+            renderer.toneMappingExposure = exposure;
+
+            // Toggle UI theme
+            document.body.className = elevation > 0 ? 'light-mode' : 'dark-mode';
         }
 
         function generateMaterialsAndUI() {
@@ -358,31 +619,26 @@
                 hotbar.appendChild(container);
             });
 
-            const c = document.createElement('canvas'); c.width=64; c.height=64;
-            const ctx = c.getContext('2d'); ctx.fillStyle='#29b6f6'; ctx.fillRect(0,0,64,64);
-            for(let i=0;i<50;i++){ ctx.fillStyle='rgba(255,255,255,0.2)'; ctx.fillRect(Math.random()*60, Math.random()*60, 8,2); }
-            const t = new THREE.CanvasTexture(c); t.magFilter=THREE.NearestFilter; 
-            materials['water'] = new THREE.MeshLambertMaterial({ color: 0x22aaff, transparent: true, opacity: 0.8, map: t });
-        }
-
-        function setupLighting() {
-            const ambient = new THREE.AmbientLight(0xffffff, 0.65);
-            scene.add(ambient);
-
-            const sun = new THREE.DirectionalLight(0xfff5e1, 1.2);
-            sun.name = 'sun';
-            sun.position.set(500, 1000, 500);
-            sun.castShadow = true;
-            sun.shadow.mapSize.set(2048, 2048);
-            scene.add(sun);
+            const c = document.createElement('canvas'); c.width=128; c.height=128;
+            const ctx = c.getContext('2d'); ctx.fillStyle='#1e4d6b'; ctx.fillRect(0,0,128,128);
+            for(let i=0;i<100;i++){ 
+                ctx.fillStyle='rgba(255,255,255,0.15)'; 
+                ctx.fillRect(Math.random()*120, Math.random()*120, 15, 3); 
+            }
+            const t = new THREE.CanvasTexture(c); 
+            t.magFilter=THREE.LinearFilter; 
+            materials['water'] = new THREE.MeshPhongMaterial({ 
+                color: 0x22aaff, transparent: true, opacity: 0.85, map: t, 
+                shininess: 100, specular: 0x111111 
+            });
         }
 
         function createEnvironment() {
-            const waterGeo = new THREE.PlaneGeometry(8000, 8000);
+            const waterGeo = new THREE.PlaneGeometry(50000, 50000);
             waterGeo.rotateX(-Math.PI / 2);
             const waterTex = materials['water'].map;
             waterTex.wrapS = THREE.RepeatWrapping; waterTex.wrapT = THREE.RepeatWrapping;
-            waterTex.repeat.set(40, 40);
+            waterTex.repeat.set(200, 200);
             waterMesh = new THREE.Mesh(waterGeo, materials['water']);
             waterMesh.position.y = -20;
             scene.add(waterMesh);
@@ -396,6 +652,40 @@
             obstacleObjects.push(groundPlane);
 
             generateNature(size);
+            generateRealisticMountains();
+        }
+
+        function generateRealisticMountains() {
+            const radius = 12000;
+            const mountainGeo = new THREE.CylinderGeometry(radius, radius + 2000, 4000, 128, 1, true);
+            
+            const pos = mountainGeo.attributes.position;
+            const v = new THREE.Vector3();
+            
+            for(let i = 0; i < pos.count; i++) {
+                v.fromBufferAttribute(pos, i);
+                if (v.y > 0) { 
+                    const angle = Math.atan2(v.z, v.x);
+                    const noise = Math.sin(angle * 12) * 500 + 
+                                  Math.sin(angle * 28) * 300 + 
+                                  Math.sin(angle * 55) * 150;
+                    v.y += noise - 800; 
+                } else {
+                    v.y -= 1000; 
+                }
+                pos.setXYZ(i, v.x, v.y, v.z);
+            }
+            mountainGeo.computeVertexNormals();
+
+            const mountainMat = new THREE.MeshLambertMaterial({
+                color: 0x293d3d,
+                flatShading: false, 
+                fog: true
+            });
+
+            const mountainMesh = new THREE.Mesh(mountainGeo, mountainMat);
+            mountainMesh.position.y = -500;
+            scene.add(mountainMesh);
         }
 
         function generateNature(islandWidth) {
@@ -447,42 +737,32 @@
         }
 
         function onPointerUp(e) {
-            // Ignore right click up (handled in pointerdown)
-            if(e.button !== 0 || e.target.closest('#ui-layer button') || e.target.closest('.slot-container') || e.target.closest('#trash')) return;
+            if(e.button !== 0 || e.target.closest('#ui-layer button') || e.target.closest('.slot-container') || e.target.closest('#trash') || e.target.closest('#gen-modal') || e.target.closest('#time-control')) return;
 
             const dist = Math.hypot(e.clientX - mouseDownPos.x, e.clientY - mouseDownPos.y);
-            if(dist > CLICK_THRESHOLD_PX) return; // Drag detected
+            if(dist > CLICK_THRESHOLD_PX) return;
 
             updatePointer(e);
             raycaster.setFromCamera(pointer, camera);
 
             if(carriedBlock) {
-                // CHANGED: INFINITE PLACEMENT
                 const intersects = raycaster.intersectObjects(obstacleObjects, false);
                 if(intersects.length > 0) {
-                    // Clone the block instead of moving the carried one
                     const newBlock = carriedBlock.clone(); 
                     newBlock.position.copy(placementGhost.position);
-                    
-                    // Clone ignores light children sometimes, ensure light is added if needed
                     if(newBlock.userData.type === 'light') {
-                         newBlock.clear(); // remove any children copied incorrectly
+                         newBlock.clear();
                          newBlock.add(new THREE.PointLight(0xffaa00, 600, 400));
                     }
-
                     interactableObjects.push(newBlock);
                     obstacleObjects.push(newBlock);
                     scene.add(newBlock);
-                    
-                    // Do NOT nullify carriedBlock, keep it for next click
                 }
             } else {
-                // Pick Up
                 const intersects = raycaster.intersectObjects(interactableObjects, false);
                 if(intersects.length > 0) {
                     const target = intersects[0].object;
                     carriedBlock = target;
-                    // Remove from world so we can move it
                     interactableObjects = interactableObjects.filter(o => o !== target);
                     obstacleObjects = obstacleObjects.filter(o => o !== target);
                     
@@ -531,14 +811,240 @@
             }
         }
 
-        // --- System Logic ---
-        function toggleTheme() {
-            isDarkMode = !isDarkMode;
-            document.body.className = isDarkMode ? 'dark-mode' : 'light-mode';
-            const col = isDarkMode ? CONFIG.skyColorDark : CONFIG.skyColorLight;
-            scene.background.setHex(col);
+        // --- ML Gen Decoding Logic ---
+        function executeMLGeneration(type) {
+            const latentVector = Array.from({length: 16}, () => Math.random() * 2 - 1);
+            const outTensor = runForwardPass(latentVector, type);
+            
+            const s = CONFIG.blockSize;
+            const cx = Math.floor(controls.target.x / s) * s + s/2;
+            const cy = Math.floor(controls.target.y / s) * s + s/2;
+            const cz = Math.floor(controls.target.z / s) * s + s/2;
+
+            const addBlk = (lx, ly, lz, bType) => {
+                const b = new THREE.Mesh(new THREE.BoxGeometry(s,s,s), materials[bType]);
+                b.position.set(cx + lx*s, cy + ly*s, cz + lz*s);
+                b.castShadow = true; b.receiveShadow = true; b.userData = {type: bType};
+                if(bType === 'light') b.add(new THREE.PointLight(0xffaa00, 600, 400));
+                scene.add(b); interactableObjects.push(b); obstacleObjects.push(b);
+            };
+
+            const getParam = (idx, min, max) => min + (Math.min(outTensor[idx], 10) / 10) * (max - min);
+
+            if(type === 'Tower') {
+                const h = Math.floor(getParam(0, 10, 25));
+                const r = Math.floor(getParam(1, 3, 6));
+                for(let y=0; y<h; y++) {
+                    for(let x=-r; x<=r; x++) {
+                        for(let z=-r; z<=r; z++) {
+                            const dist = Math.sqrt(x*x + z*z);
+                            if(Math.abs(dist - r) < 0.8) {
+                                let bType = 'stone';
+                                if(y % 4 === 0) bType = 'brick'; 
+                                if(y > 2 && y < h-2 && (x===0 || z===0) && y%3!==0) bType = 'glass';
+                                if(y === h-1 && (x+z)%2===0) bType = 'none'; 
+                                if(bType !== 'none') addBlk(x, y, z, bType);
+                            }
+                            if(y===0 && dist < r) addBlk(x, y, z, 'wood'); 
+                            if(y===h-2 && x===0 && z===0) addBlk(x, y, z, 'light'); 
+                        }
+                    }
+                }
+            }
+            else if(type === 'House') {
+                const w = Math.floor(getParam(0, 3, 6));
+                const d = Math.floor(getParam(1, 3, 6));
+                const h = Math.floor(getParam(2, 4, 7));
+                for(let y=0; y<=h+w; y++) {
+                    for(let x=-w; x<=w; x++) {
+                        for(let z=-d; z<=d; z++) {
+                            let bType = null;
+                            if(y===0) bType = 'stone'; 
+                            else if(y<h) {
+                                if(x===-w || x===w || z===-d || z===d) {
+                                    bType = 'plank_cube'; 
+                                    if(y>1 && y<h-1 && (x===0 || z===0)) bType = 'glass'; 
+                                    if(y===1 && z===d && x===0) bType = 'none'; 
+                                }
+                            } else {
+                                const roofH = y - h;
+                                if(Math.abs(x) <= w - roofH + 1 && Math.abs(x) >= w - roofH) {
+                                    if(Math.abs(z) <= d + 1) bType = 'wood';
+                                }
+                            }
+                            if(y===1 && x===0 && z===0) bType = 'light';
+                            if(y===0 && (Math.abs(x)>w || Math.abs(z)>d) && Math.abs(x)<w+3 && Math.abs(z)<d+3) bType = 'grass'; 
+                            
+                            if(bType && bType !== 'none') addBlk(x, y, z, bType);
+                        }
+                    }
+                }
+            }
+            else if(type === 'Castle') {
+                const size = Math.floor(getParam(0, 6, 12));
+                const h = Math.floor(getParam(1, 4, 8));
+                for(let y=0; y<h+3; y++) {
+                    for(let x=-size-2; x<=size+2; x++) {
+                        for(let z=-size-2; z<=size+2; z++) {
+                            let bType = null;
+                            const isWall = (Math.abs(x) === size || Math.abs(z) === size) && Math.abs(x)<=size && Math.abs(z)<=size;
+                            const isTower = Math.abs(x) >= size-1 && Math.abs(x) <= size+1 && Math.abs(z) >= size-1 && Math.abs(z) <= size+1;
+                            const isMoat = (Math.abs(x) === size+2 || Math.abs(z) === size+2) && y===0;
+                            
+                            if(isMoat) bType = 'waterBlock';
+                            else if(isTower) {
+                                if(y < h+2) bType = 'stone';
+                                else if((x+z)%2===0) bType = 'stone'; 
+                            }
+                            else if(isWall && y < h) {
+                                bType = 'brick';
+                                if(y===1 && z===size && Math.abs(x)<2) bType = 'none'; 
+                            }
+                            else if(y===0 && z===size+1 && Math.abs(x)<2) bType = 'wood'; 
+                            else if(y===1 && isTower && Math.abs(x)===size && Math.abs(z)===size) bType = 'light';
+                            
+                            if(bType && bType !== 'none') addBlk(x, y, z, bType);
+                        }
+                    }
+                }
+            }
+            else if(type === 'Temple') {
+                const w = Math.floor(getParam(0, 5, 9));
+                const d = Math.floor(getParam(1, 6, 11));
+                const h = Math.floor(getParam(2, 5, 8));
+                for(let y=0; y<=h+3; y++) {
+                    for(let x=-w; x<=w; x++) {
+                        for(let z=-d; z<=d; z++) {
+                            let bType = null;
+                            if(y===0) bType = 'stone'; 
+                            else if(y===1) bType = 'plank_cube'; 
+                            else if(y>1 && y<h) {
+                                if((Math.abs(x)===w-1 || Math.abs(z)===d-1) && x%2===0 && z%2===0 && Math.abs(x)<w && Math.abs(z)<d) bType = 'stone'; 
+                                if(x===0 && z===0 && y===2) bType = 'light'; 
+                            }
+                            else if(y===h) {
+                                if(Math.abs(x)<w && Math.abs(z)<d) bType = 'stone'; 
+                            }
+                            else if(y>h) {
+                                const roofLevel = y - h;
+                                if(Math.abs(x) <= w - roofLevel && Math.abs(z) <= d) bType = 'brick'; 
+                            }
+                            if(bType) addBlk(x, y, z, bType);
+                        }
+                    }
+                }
+            }
+            else if(type === 'Bridge') {
+                const len = Math.floor(getParam(0, 8, 15));
+                const width = Math.floor(getParam(1, 2, 4));
+                for(let x=-len; x<=len; x++) {
+                    for(let y=0; y<6; y++) {
+                        for(let z=-width; z<=width; z++) {
+                            let bType = null;
+                            const archY = Math.floor(Math.cos((x/len) * Math.PI/2) * 4);
+                            if(y < archY && Math.abs(x)<len-2) { } 
+                            else if(y === archY) bType = 'stone'; 
+                            else if(y === archY + 1) bType = 'wood'; 
+                            else if(y === archY + 2 && Math.abs(z) === width) {
+                                bType = 'brick'; 
+                                if(x%3===0) addBlk(x, y+1, z, 'light'); 
+                            } else if(y === 0 && Math.abs(x) < len) bType = 'waterBlock'; 
+                            
+                            if(bType) addBlk(x, y, z, bType);
+                        }
+                    }
+                }
+            }
+            else if(type === 'Pyramid') {
+                const size = Math.floor(getParam(0, 8, 14));
+                for(let y=0; y<size; y++) {
+                    const currentSize = size - y;
+                    for(let x=-currentSize; x<=currentSize; x++) {
+                        for(let z=-currentSize; z<=currentSize; z++) {
+                            let bType = 'stone';
+                            if(Math.abs(x) === currentSize || Math.abs(z) === currentSize) {
+                                bType = (y%2===0) ? 'stone' : 'brick';
+                            } else if(y===0) bType = 'plank_cube'; 
+                            else if(x===0 && z===0 && y===1) bType = 'light'; 
+                            else if(Math.abs(x) < currentSize && Math.abs(z) < currentSize) bType = 'none'; 
+                            
+                            if(y === size - 1) bType = 'glass'; 
+                            if(y === 0 && Math.abs(x) === currentSize && x%2===0) addBlk(x+1, y, z+1, 'grass'); 
+                            
+                            if(bType && bType !== 'none') addBlk(x, y, z, bType);
+                        }
+                    }
+                }
+            }
+            else if(type === 'Skyscraper') {
+                const w = Math.floor(getParam(0, 3, 5));
+                const d = Math.floor(getParam(1, 3, 5));
+                const floors = Math.floor(getParam(2, 6, 15));
+                const floorHeight = 4;
+                for(let f=0; f<floors; f++) {
+                    for(let y=0; y<floorHeight; y++) {
+                        for(let x=-w; x<=w; x++) {
+                            for(let z=-d; z<=d; z++) {
+                                let bType = null;
+                                let gy = f*floorHeight + y;
+                                if(y===0) bType = 'stone'; 
+                                else if(x===-w || x===w || z===-d || z===d) {
+                                    if(Math.abs(x) === w && Math.abs(z) === d) bType = 'stone'; 
+                                    else bType = 'glass'; 
+                                } else if (x===0 && z===0) bType = 'light'; 
+                                
+                                if(bType) addBlk(x, gy, z, bType);
+                            }
+                        }
+                    }
+                }
+            }
+            else if(type === 'Ruin') {
+                const w = Math.floor(getParam(0, 5, 8));
+                const d = Math.floor(getParam(1, 5, 8));
+                const h = Math.floor(getParam(2, 4, 7));
+                let idx = 0;
+                for(let y=0; y<h+3; y++) {
+                    for(let x=-w; x<=w; x++) {
+                        for(let z=-d; z<=d; z++) {
+                            const val = outTensor[idx % 48] + getParam((Math.abs(x)*Math.abs(z)+y)%16, 0, 2);
+                            idx++;
+                            if(val > 1.2) { 
+                                let bType = 'stone';
+                                if(y===0) bType = (val > 2.0) ? 'grass' : 'stone';
+                                if(Math.abs(x)===w && Math.abs(z)===d) bType = 'brick';
+                                if(val < 1.7 && bType === 'stone' && y > 0) continue; 
+                                addBlk(x, y, z, bType);
+                            }
+                        }
+                    }
+                }
+            }
+            else if(type === 'Abstract') {
+                let idx = 0;
+                for(let x=0; x<4; x++) {
+                    for(let y=0; y<3; y++) {
+                        for(let z=0; z<4; z++) {
+                            const val = outTensor[idx++];
+                            if(val > 0.8) { 
+                                const bTypes = ['glass', 'light', 'stone', 'waterBlock'];
+                                const bType = bTypes[Math.floor((val * 10) % bTypes.length)];
+                                addBlk(x, y*2, z, bType);
+                                if(x !== 0) addBlk(-x, y*2, z, bType);
+                                if(z !== 0) addBlk(x, y*2, -z, bType);
+                                if(x !== 0 && z !== 0) addBlk(-x, y*2, -z, bType);
+                                if(val > 1.2) {
+                                    addBlk(x, y*2+1, z, 'light');
+                                    if(x !== 0) addBlk(-x, y*2+1, -z, 'glass');
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
+        // --- System Logic ---
         function createNewWorld() {
             if(worlds.length >= CONFIG.maxWorlds) return alert("Max 10 worlds!");
             const newWorld = { id: worldCounter++, data: [] };
