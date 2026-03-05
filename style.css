@@ -12,7 +12,7 @@
 
 body.dark-mode {
     --bg-color: #1a1a2e;
-    --ui-bg: rgba(0, 0, 0, 0.4);
+    --ui-bg: rgba(120, 71, 71, 0.4);
     --slot-bg: #2a2a2a;
     --slot-border: #444;
     --text-color: #eee;
