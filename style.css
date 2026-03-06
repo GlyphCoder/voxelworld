@@ -268,3 +268,24 @@ button.btn.magic { background: #9c27b0; color: white; box-shadow: 0 4px 0 #6a1b9
 .toggle-switch.active .toggle-dot { left: 22px; }
 
 #fileInput { display: none; }
+
+#sound-volume {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 80px;
+    height: 4px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+}
+
+#sound-volume::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    background: #4CAF50;
+    border-radius: 50%;
+    cursor: pointer;
+}

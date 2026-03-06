@@ -93,6 +93,16 @@
                 </div>
             </div>
             <div class="setting-item">
+                <span class="setting-label">Sound</span>
+                <div class="toggle-switch active" id="sound-toggle">
+                    <div class="toggle-dot"></div>
+                </div>
+            </div>
+            <div class="setting-item">
+                <span class="setting-label">Volume</span>
+                <input type="range" id="sound-volume" min="0" max="100" value="30" style="width: 80px;">
+            </div>
+            <div class="setting-item">
                 <span>Undo: <span id="undo-count">0</span></span>
                 <button class="btn" style="padding: 4px 8px; font-size: 11px;" onclick="undoAction()">⟲</button>
             </div>

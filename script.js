@@ -11,8 +11,200 @@ const CONFIG = {
     enableParticles: true,
     enableGridSnap: true,
     enableShadows: true,
-    enableFog: true
+    enableFog: true,
+    enableSounds: true,
+    soundVolume: 0.3
 };
+
+// --- Audio System (Minecraft-Like) ---
+class AudioManager {
+    constructor() {
+        this.audioContext = null;
+        this.enabled = CONFIG.enableSounds;
+        this.masterVolume = CONFIG.soundVolume;
+        this.oscillators = [];
+        this.gainNodes = [];
+        this.initAudioContext();
+    }
+
+    initAudioContext() {
+        if (!this.audioContext) {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+    }
+
+    playSound(type, frequency = 440, duration = 0.1, volume = 1) {
+        if (!this.enabled || !this.audioContext) return;
+
+        switch(type) {
+            case 'place':
+                this.playMCPlace(volume);
+                break;
+            case 'delete':
+                this.playMCBreak(volume);
+                break;
+            case 'paint':
+                this.playMCHit(volume);
+                break;
+            case 'tool':
+                this.playMCDing(volume);
+                break;
+            case 'ui':
+                this.playMCClick(volume);
+                break;
+            case 'error':
+                this.playMCError(volume);
+                break;
+        }
+    }
+
+    // Minecraft-like block place sound (crisp pop)
+    playMCPlace(volume) {
+        const now = this.audioContext.currentTime;
+        const dur = 0.08;
+        
+        const osc = this.audioContext.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(900, now);
+        osc.frequency.exponentialRampToValueAtTime(700, now + dur);
+        
+        const gain = this.audioContext.createGain();
+        gain.gain.setValueAtTime(volume * this.masterVolume * 0.6, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+        
+        osc.connect(gain);
+        gain.connect(this.audioContext.destination);
+        osc.start(now);
+        osc.stop(now + dur);
+    }
+
+    // Minecraft-like block break sound (snap + noise)
+    playMCBreak(volume) {
+        const now = this.audioContext.currentTime;
+        
+        // Main snap sound
+        const osc1 = this.audioContext.createOscillator();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(150, now);
+        osc1.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+        
+        // High-end crack
+        const osc2 = this.audioContext.createOscillator();
+        osc2.type = 'square';
+        osc2.frequency.setValueAtTime(300, now);
+        osc2.frequency.exponentialRampToValueAtTime(150, now + 0.08);
+        
+        const gain = this.audioContext.createGain();
+        gain.gain.setValueAtTime(volume * this.masterVolume * 0.5, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+        
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(this.audioContext.destination);
+        
+        osc1.start(now);
+        osc2.start(now);
+        osc1.stop(now + 0.1);
+        osc2.stop(now + 0.08);
+    }
+
+    // Minecraft-like hit sound
+    playMCHit(volume) {
+        const now = this.audioContext.currentTime;
+        const dur = 0.05;
+        
+        const osc = this.audioContext.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, now);
+        osc.frequency.exponentialRampToValueAtTime(600, now + dur);
+        
+        const gain = this.audioContext.createGain();
+        gain.gain.setValueAtTime(volume * this.masterVolume * 0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+        
+        osc.connect(gain);
+        gain.connect(this.audioContext.destination);
+        osc.start(now);
+        osc.stop(now + dur);
+    }
+
+    // Minecraft-like ding sound (UI)
+    playMCDing(volume) {
+        const now = this.audioContext.currentTime;
+        const dur = 0.12;
+        
+        const osc = this.audioContext.createOscillator();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(1000, now);
+        osc.frequency.exponentialRampToValueAtTime(800, now + dur);
+        
+        const gain = this.audioContext.createGain();
+        gain.gain.setValueAtTime(volume * this.masterVolume * 0.5, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+        
+        osc.connect(gain);
+        gain.connect(this.audioContext.destination);
+        osc.start(now);
+        osc.stop(now + dur);
+    }
+
+    // Minecraft-like click sound
+    playMCClick(volume) {
+        const now = this.audioContext.currentTime;
+        const dur = 0.04;
+        
+        const osc = this.audioContext.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1200, now);
+        osc.frequency.exponentialRampToValueAtTime(900, now + dur);
+        
+        const gain = this.audioContext.createGain();
+        gain.gain.setValueAtTime(volume * this.masterVolume * 0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+        
+        osc.connect(gain);
+        gain.connect(this.audioContext.destination);
+        osc.start(now);
+        osc.stop(now + dur);
+    }
+
+    // Minecraft-like error sound
+    playMCError(volume) {
+        const now = this.audioContext.currentTime;
+        
+        const osc1 = this.audioContext.createOscillator();
+        osc1.frequency.setValueAtTime(200, now);
+        
+        const osc2 = this.audioContext.createOscillator();
+        osc2.frequency.setValueAtTime(160, now);
+        
+        const gain = this.audioContext.createGain();
+        gain.gain.setValueAtTime(volume * this.masterVolume * 0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(this.audioContext.destination);
+        
+        osc1.start(now);
+        osc2.start(now);
+        osc1.stop(now + 0.15);
+        osc2.stop(now + 0.15);
+    }
+
+    setVolume(vol) {
+        this.masterVolume = Math.max(0, Math.min(1, vol));
+        CONFIG.soundVolume = this.masterVolume;
+    }
+
+    toggle() {
+        this.enabled = !this.enabled;
+        CONFIG.enableSounds = this.enabled;
+        return this.enabled;
+    }
+}
+
+let audioManager = null;
 
 const BLOCK_TYPES = [
     { id: 'grass', label: 'Grass', color: '#58a04c', noise: true },
@@ -27,12 +219,12 @@ const BLOCK_TYPES = [
 
 // Shape definitions for different block types
 const SHAPES = {
-    cube: { name: 'Cube', geometry: (s) => new THREE.BoxGeometry(s, s, s) },
-    sphere: { name: 'Sphere', geometry: (s) => new THREE.SphereGeometry(s/2, 16, 16) },
-    cylinder: { name: 'Cylinder', geometry: (s) => new THREE.CylinderGeometry(s/2, s/2, s, 16) },
-    pyramid: { name: 'Pyramid', geometry: (s) => new THREE.ConeGeometry(s/2, s, 8) },
+    cube: { name: 'Cube', geometry: (s) => new THREE.BoxGeometry(s, s, s, 2, 2, 2) },
+    sphere: { name: 'Sphere', geometry: (s) => new THREE.SphereGeometry(s/2, 32, 32) },
+    cylinder: { name: 'Cylinder', geometry: (s) => new THREE.CylinderGeometry(s/2, s/2, s, 32, 8) },
+    pyramid: { name: 'Pyramid', geometry: (s) => new THREE.ConeGeometry(s/2, s, 32, 8) },
     wedge: { name: 'Wedge', geometry: (s) => createWedgeGeometry(s) },
-    torus: { name: 'Torus', geometry: (s) => new THREE.TorusGeometry(s/3, s/8, 16, 32) }
+    torus: { name: 'Torus', geometry: (s) => new THREE.TorusGeometry(s/3, s/8, 32, 100) }
 };
 
 function createWedgeGeometry(size) {
@@ -96,35 +288,58 @@ let maxUndoSteps = 50;
 function createParticle(pos, color = '#ffffff') {
     if (!CONFIG.enableParticles) return;
     
+    // Create Minecraft-like cubic particle
+    const size = 12 + Math.random() * 8;
+    const particleGeo = new THREE.BoxGeometry(size, size, size);
+    
+    // Create textured material for the particle
     const canvas = document.createElement('canvas');
-    canvas.width = 16; canvas.height = 16;
+    canvas.width = 32;
+    canvas.height = 32;
     const ctx = canvas.getContext('2d');
+    
+    // Parse color and add texture
+    const rgb = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(color);
+    const r = parseInt(rgb[1], 16);
+    const g = parseInt(rgb[2], 16);
+    const b = parseInt(rgb[3], 16);
+    
+    // Draw block texture
     ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(8, 8, 7, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.fillRect(0, 0, 32, 32);
+    ctx.fillStyle = `rgba(0,0,0,0.2)`;
+    for(let i=0; i<100; i++) {
+        ctx.fillRect(Math.random()*32, Math.random()*32, 2, 2);
+    }
     
     const texture = new THREE.CanvasTexture(canvas);
-    const material = new THREE.PointsMaterial({ 
-        map: texture, 
-        sizeAttenuation: true, 
+    texture.magFilter = THREE.NearestFilter;
+    
+    const particleMat = new THREE.MeshLambertMaterial({
+        map: texture,
         transparent: true,
-        size: 30
+        opacity: 0.9
     });
     
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.BufferAttribute(
-        new Float32Array([0, 0, 0]), 3
-    ));
-    
-    const particle = new THREE.Points(geometry, material);
+    const particle = new THREE.Mesh(particleGeo, particleMat);
     particle.position.copy(pos);
     particle.velocity = new THREE.Vector3(
-        (Math.random() - 0.5) * 2,
-        Math.random() * 2 + 0.5,
-        (Math.random() - 0.5) * 2
+        (Math.random() - 0.5) * 3,
+        Math.random() * 2.5 + 1,
+        (Math.random() - 0.5) * 3
     );
-    particle.life = 60;
+    particle.life = 50;
+    particle.maxLife = 50;
+    particle.rotation.set(
+        Math.random() * Math.PI,
+        Math.random() * Math.PI,
+        Math.random() * Math.PI
+    );
+    particle.angularVelocity = new THREE.Vector3(
+        (Math.random() - 0.5) * 0.2,
+        (Math.random() - 0.5) * 0.2,
+        (Math.random() - 0.5) * 0.2
+    );
     
     scene.add(particle);
     particles.push(particle);
@@ -134,9 +349,20 @@ function updateParticles() {
     for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
         p.position.add(p.velocity);
-        p.velocity.y -= 0.05; // gravity
+        p.velocity.y -= 0.08; // gravity
+        p.velocity.multiplyScalar(0.98); // air resistance
+        
+        // Rotate the particle
+        if (p.angularVelocity) {
+            p.rotation.x += p.angularVelocity.x;
+            p.rotation.y += p.angularVelocity.y;
+            p.rotation.z += p.angularVelocity.z;
+        }
+        
         p.life--;
-        p.material.opacity = p.life / 60;
+        if (p.maxLife && p.material.opacity !== undefined) {
+            p.material.opacity = (p.life / p.maxLife) * 0.9;
+        }
         
         if (p.life <= 0) {
             scene.remove(p);
@@ -274,6 +500,11 @@ function switchTool(tool) {
     // Show/hide shape panel for build mode
     document.getElementById('shape-panel').classList.toggle('active', tool === 'build');
     document.getElementById('color-panel').classList.toggle('active', tool === 'paint');
+    
+    // Play tool switch sound
+    if (audioManager) {
+        audioManager.playSound('tool', 600, 0.15);
+    }
 }
 
 // --- Settings ---
@@ -299,6 +530,22 @@ function setupSettingsPanel() {
         scene.fog.far = CONFIG.enableFog ? 8000 : 40000;
         e.target.closest('.toggle-switch').classList.toggle('active');
     });
+
+    const soundToggle = document.getElementById('sound-toggle');
+    if (soundToggle) {
+        soundToggle.addEventListener('click', (e) => {
+            const isEnabled = audioManager.toggle();
+            e.target.closest('.toggle-switch').classList.toggle('active', isEnabled);
+            audioManager.playSound('ui', 550, 0.1);
+        });
+    }
+
+    const soundVolume = document.getElementById('sound-volume');
+    if (soundVolume) {
+        soundVolume.addEventListener('input', (e) => {
+            audioManager.setVolume(parseFloat(e.target.value) / 100);
+        });
+    }
     
     document.getElementById('settings-btn').addEventListener('click', () => {
         document.getElementById('settings-panel').style.display = 
@@ -312,6 +559,9 @@ function setupShapeSelector() {
             document.querySelectorAll('.shape-option').forEach(o => o.classList.remove('selected'));
             option.classList.add('selected');
             currentShape = option.dataset.shape;
+            if (audioManager) {
+                audioManager.playSound('ui', 600, 0.1);
+            }
         });
     });
 }
@@ -319,15 +569,22 @@ function setupShapeSelector() {
 function setupColorPicker() {
     document.getElementById('colorPicker').addEventListener('change', (e) => {
         currentColor = e.target.value;
+        if (audioManager) {
+            audioManager.playSound('paint', 400, 0.1);
+        }
     });
 }
 
 window.selectColorPreset = (color) => {
     currentColor = color;
     document.getElementById('colorPicker').value = color;
+    if (audioManager) {
+        audioManager.playSound('paint', 450, 0.12);
+    }
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+    audioManager = new AudioManager();
     setupSettingsPanel();
     setupShapeSelector();
     setupColorPicker();
@@ -345,17 +602,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
 window.spawnBlock = spawnBlock;
 window.downloadWorld = downloadWorld;
-window.triggerLoad = () => document.getElementById('fileInput').click();
+window.triggerLoad = () => {
+    if (audioManager) audioManager.playSound('ui', 650, 0.1);
+    document.getElementById('fileInput').click();
+};
 window.createNewWorld = createNewWorld;
 window.switchWorld = switchWorld;
 window.deleteWorld = deleteWorld;
 window.dropCarried = dropCarried;
 
-window.openGenModal = () => document.getElementById('gen-modal').style.display = 'flex';
+window.openGenModal = () => {
+    document.getElementById('gen-modal').style.display = 'flex';
+    if (audioManager) audioManager.playSound('ui', 700, 0.1);
+};
 window.closeGenModal = () => {
     document.getElementById('gen-modal').style.display = 'none';
     document.getElementById('gen-options').style.display = 'grid';
     document.getElementById('gen-progress-wrapper').style.display = 'none';
+    if (audioManager) audioManager.playSound('ui', 600, 0.1);
 };
 window.startANN = (type) => {
     document.getElementById('gen-options').style.display = 'none';
@@ -363,6 +627,8 @@ window.startANN = (type) => {
     let bar = document.getElementById('gen-progress-bar');
     bar.style.width = '0%';
     let progress = 0;
+    
+    if (audioManager) audioManager.playSound('tool', 800, 0.2);
     
     let interval = setInterval(() => {
         progress += Math.random() * 20 + 10;
@@ -383,26 +649,34 @@ document.addEventListener('contextmenu', event => event.preventDefault());
 
 function init() {
     scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0xe6ded1, 0.00008);
+    scene.fog = new THREE.FogExp2(0xe6ded1, 0.000075);
+    scene.background = new THREE.Color(0xe6ded1);
 
-    camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 40000);
+    camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 50000);
     camera.position.set(2000, 1400, 2000);
 
-    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer = new THREE.WebGLRenderer({ 
+        antialias: true,
+        alpha: true,
+        precision: 'highp',
+        powerPreference: 'high-performance'
+    });
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
     renderer.shadowMap.enabled = CONFIG.enableShadows;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.7;
+    renderer.toneMappingExposure = 0.75;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
     document.body.appendChild(renderer.domElement);
 
     setupLightingAndSky();
     generateMaterialsAndUI();
     createEnvironment();
-    createClouds(); // Add cloud system
+    createClouds();
 
-    const sunGeo = new THREE.SphereGeometry(200, 32, 32);
-    const sunMat = new THREE.MeshBasicMaterial({color: 0xffff00, fog: false});
+    const sunGeo = new THREE.SphereGeometry(250, 32, 32);
+    const sunMat = new THREE.MeshBasicMaterial({color: 0xffff00, fog: false, toneMapped: false});
     sunMesh = new THREE.Mesh(sunGeo, sunMat);
     sunMesh.castShadow = false;
     sunMesh.receiveShadow = false;
@@ -448,33 +722,42 @@ function init() {
 }
 
 function setupLightingAndSky() {
-    ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    // Enhanced ambient light for better depth perception
+    ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambientLight);
 
-    dirLight = new THREE.DirectionalLight(0xfff0dd, 1.5);
+    // Improved directional light with better shadows
+    dirLight = new THREE.DirectionalLight(0xfff0dd, 1.8);
     dirLight.name = 'sun';
     dirLight.castShadow = true;
-    dirLight.shadow.mapSize.set(2048, 2048);
+    dirLight.shadow.mapSize.set(4096, 4096);
     dirLight.shadow.camera.near = 10;
     dirLight.shadow.camera.far = 10000;
-    dirLight.shadow.camera.left = -3000;
-    dirLight.shadow.camera.right = 3000;
-    dirLight.shadow.camera.top = 3000;
-    dirLight.shadow.camera.bottom = -3000;
+    dirLight.shadow.camera.left = -3500;
+    dirLight.shadow.camera.right = 3500;
+    dirLight.shadow.camera.top = 3500;
+    dirLight.shadow.camera.bottom = -3500;
+    dirLight.shadow.bias = -0.0005;
+    dirLight.shadow.radius = 3;
     scene.add(dirLight);
 
+    // Add secondary fill light for more realistic lighting
+    const fillLight = new THREE.DirectionalLight(0xaaccff, 0.4);
+    fillLight.position.set(-1, 0.5, -1).normalize().multiplyScalar(4000);
+    scene.add(fillLight);
+
     sky = new Sky();
-    sky.scale.setScalar( 30000 );
-    scene.add( sky );
+    sky.scale.setScalar(50000);
+    scene.add(sky);
 
     const skyUniforms = sky.material.uniforms;
-    skyUniforms[ 'turbidity' ].value = 10;
-    skyUniforms[ 'rayleigh' ].value = 3;
-    skyUniforms[ 'mieCoefficient' ].value = 0.006;
-    skyUniforms[ 'mieDirectionalG' ].value = 0.9;
+    skyUniforms['turbidity'].value = 12;
+    skyUniforms['rayleigh'].value = 2.5;
+    skyUniforms['mieCoefficient'].value = 0.008;
+    skyUniforms['mieDirectionalG'].value = 0.8;
 
     sunSphere = new THREE.Vector3();
-    updateTimeOfDay(14); // Initialize at 14:00 (2:00 PM)
+    updateTimeOfDay(14);
 }
 
 function updateTimeOfDay(hours) {
@@ -564,38 +847,75 @@ function generateMaterialsAndUI() {
     
     BLOCK_TYPES.forEach(block => {
         const canvas = document.createElement('canvas');
-        canvas.width = 64; canvas.height = 64;
+        canvas.width = 128; canvas.height = 128;
         const ctx = canvas.getContext('2d');
-        ctx.fillStyle = block.color; ctx.fillRect(0,0,64,64);
+        
+        // Create more detailed textures
+        ctx.fillStyle = block.color;
+        ctx.fillRect(0,0,128,128);
         
         if(block.noise) {
-            for(let i=0; i<300; i++) {
-                ctx.fillStyle = Math.random()>0.5 ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
-                ctx.fillRect(Math.random()*64, Math.random()*64,4,4);
+            // Add more sophisticated noise pattern
+            for(let i=0; i<600; i++) {
+                ctx.fillStyle = Math.random()>0.5 ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)';
+                ctx.fillRect(Math.random()*128, Math.random()*128, Math.random()*6+2, Math.random()*6+2);
             }
-            ctx.strokeStyle = "rgba(0,0,0,0.15)"; ctx.lineWidth = 4; ctx.strokeRect(0,0,64,64);
+            // Add texture cracks
+            for(let i=0; i<20; i++) {
+                ctx.strokeStyle = `rgba(0,0,0,${0.05 + Math.random()*0.1})`;
+                ctx.lineWidth = Math.random()*2;
+                ctx.beginPath();
+                ctx.moveTo(Math.random()*128, Math.random()*128);
+                ctx.lineTo(Math.random()*128, Math.random()*128);
+                ctx.stroke();
+            }
+            ctx.strokeStyle = "rgba(0,0,0,0.2)"; ctx.lineWidth = 3; ctx.strokeRect(1,1,126,126);
         } else if(block.id === 'glass') {
-            ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = 4; ctx.strokeRect(0,0,64,64);
-            ctx.beginPath(); ctx.moveTo(0,64); ctx.lineTo(20,44); ctx.stroke();
+            // Glass reflection pattern
+            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+            ctx.fillRect(0,0,128,128);
+            ctx.strokeStyle = "rgba(255,255,255,0.6)"; ctx.lineWidth = 3; ctx.strokeRect(2,2,124,124);
+            ctx.strokeStyle = "rgba(100,150,255,0.4)"; ctx.lineWidth = 2;
+            for(let i=0; i<8; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, i*16);
+                ctx.lineTo(128, i*16);
+                ctx.stroke();
+            }
         }
 
         const tex = new THREE.CanvasTexture(canvas);
-        tex.magFilter = THREE.NearestFilter; tex.colorSpace = THREE.SRGBColorSpace;
+        tex.magFilter = THREE.NearestFilter;
+        tex.colorSpace = THREE.SRGBColorSpace;
         
         const matParams = { map: tex };
         if(block.opacity) { matParams.transparent = true; matParams.opacity = block.opacity; }
-        if(block.emissive) { matParams.emissive = block.color; matParams.emissiveIntensity = 0.5; }
+        if(block.emissive) { matParams.emissive = block.color; matParams.emissiveIntensity = 0.7; matParams.toneMapped = false; }
 
         if(block.id === 'grass') {
-             const dirtC = document.createElement('canvas'); dirtC.width=64; dirtC.height=64;
-             const dCtx = dirtC.getContext('2d'); dCtx.fillStyle = '#5d4037'; dCtx.fillRect(0,0,64,64);
-             for(let i=0; i<200; i++) { dCtx.fillStyle='rgba(0,0,0,0.1)'; dCtx.fillRect(Math.random()*64, Math.random()*64,4,4); }
-             dCtx.strokeStyle = "rgba(0,0,0,0.1)"; dCtx.lineWidth=4; dCtx.strokeRect(0,0,64,64);
-             const dirtTex = new THREE.CanvasTexture(dirtC); dirtTex.magFilter = THREE.NearestFilter; dirtTex.colorSpace = THREE.SRGBColorSpace;
+             const dirtC = document.createElement('canvas');
+             dirtC.width = 128; dirtC.height = 128;
+             const dCtx = dirtC.getContext('2d');
+             dCtx.fillStyle = '#5d4037';
+             dCtx.fillRect(0,0,128,128);
+             // Add detailed dirt texture
+             for(let i=0; i<400; i++) {
+                 dCtx.fillStyle=`rgba(0,0,0,${0.05 + Math.random()*0.15})`;
+                 dCtx.fillRect(Math.random()*128, Math.random()*128, Math.random()*4+1, Math.random()*4+1);
+             }
+             dCtx.strokeStyle = "rgba(0,0,0,0.15)";
+             dCtx.lineWidth = 2;
+             dCtx.strokeRect(1,1,126,126);
+             const dirtTex = new THREE.CanvasTexture(dirtC);
+             dirtTex.magFilter = THREE.NearestFilter;
+             dirtTex.colorSpace = THREE.SRGBColorSpace;
              materials[block.id] = [
-                 new THREE.MeshLambertMaterial({map: dirtTex}), new THREE.MeshLambertMaterial({map: dirtTex}),
-                 new THREE.MeshLambertMaterial(matParams), new THREE.MeshLambertMaterial({map: dirtTex}),
-                 new THREE.MeshLambertMaterial({map: dirtTex}), new THREE.MeshLambertMaterial({map: dirtTex})
+                 new THREE.MeshLambertMaterial({map: dirtTex}),
+                 new THREE.MeshLambertMaterial({map: dirtTex}),
+                 new THREE.MeshLambertMaterial(matParams),
+                 new THREE.MeshLambertMaterial({map: dirtTex}),
+                 new THREE.MeshLambertMaterial({map: dirtTex}),
+                 new THREE.MeshLambertMaterial({map: dirtTex})
              ];
         } else {
             materials[block.id] = new THREE.MeshLambertMaterial(matParams);
@@ -618,46 +938,76 @@ function generateMaterialsAndUI() {
         hotbar.appendChild(container);
     });
 
-    const c = document.createElement('canvas'); c.width=128; c.height=128;
-    const ctx = c.getContext('2d'); ctx.fillStyle='#1e4d6b'; ctx.fillRect(0,0,128,128);
-    for(let i=0;i<100;i++){ 
-        ctx.fillStyle='rgba(255,255,255,0.15)'; 
-        ctx.fillRect(Math.random()*120, Math.random()*120, 15, 3); 
+    // Enhanced water texture with wave pattern
+    const waterCanvas = document.createElement('canvas');
+    waterCanvas.width = 256;
+    waterCanvas.height = 256;
+    const waterCtx = waterCanvas.getContext('2d');
+    
+    // Create wavy pattern
+    waterCtx.fillStyle='#1a5a7a';
+    waterCtx.fillRect(0,0,256,256);
+    
+    for(let i=0; i<200; i++) {
+        waterCtx.fillStyle=`rgba(255,255,255,${0.1 + Math.random()*0.15})`;
+        waterCtx.fillRect(Math.random()*256, Math.random()*256, Math.random()*20+5, 2);
     }
-    const t = new THREE.CanvasTexture(c); 
-    t.magFilter=THREE.LinearFilter; 
-    materials['water'] = new THREE.MeshPhongMaterial({ 
-        color: 0x22aaff, transparent: true, opacity: 0.85, map: t, 
-        shininess: 100, specular: 0x111111 
+    
+    // Add wave lines
+    waterCtx.strokeStyle='rgba(255,255,255,0.2)';
+    waterCtx.lineWidth = 1;
+    for(let i=0; i<256; i+=20) {
+        waterCtx.beginPath();
+        waterCtx.moveTo(0, i);
+        for(let x=0; x<256; x+=10) {
+            waterCtx.lineTo(x, i + Math.sin(x*0.05)*3);
+        }
+        waterCtx.lineTo(256, i);
+        waterCtx.stroke();
+    }
+    
+    const waterTex = new THREE.CanvasTexture(waterCanvas);
+    waterTex.magFilter = THREE.LinearFilter;
+    waterTex.colorSpace = THREE.SRGBColorSpace;
+    materials['water'] = new THREE.MeshPhongMaterial({
+        color: 0x1a7aaa,
+        transparent: true,
+        opacity: 0.75,
+        map: waterTex,
+        shininess: 120,
+        specular: 0x444488,
+        wireframe: false
     });
 }
 
 function createEnvironment() {
-    // Water with better animation
-    const waterGeo = new THREE.PlaneGeometry(80000, 80000);
+    // Enhanced water with better appearance
+    const waterGeo = new THREE.PlaneGeometry(100000, 100000);
     waterGeo.rotateX(-Math.PI / 2);
     const waterTex = materials['water'].map;
     waterTex.wrapS = THREE.RepeatWrapping; 
     waterTex.wrapT = THREE.RepeatWrapping;
-    waterTex.repeat.set(400, 400);
+    waterTex.repeat.set(600, 600);
     waterMesh = new THREE.Mesh(waterGeo, materials['water']);
     waterMesh.position.y = -50;
+    waterMesh.receiveShadow = true;
     scene.add(waterMesh);
 
     // Large island with better terrain
     const size = CONFIG.blockSize * CONFIG.islandSize;
-    const islandGeo = new THREE.BoxGeometry(size, CONFIG.blockSize * 2, size);
+    const islandGeo = new THREE.BoxGeometry(size, CONFIG.blockSize * 3, size, 4, 4, 4);
     groundPlane = new THREE.Mesh(islandGeo, materials['grass']);
-    groundPlane.position.y = -CONFIG.blockSize;
+    groundPlane.position.y = -CONFIG.blockSize * 1.5;
+    groundPlane.castShadow = true;
     groundPlane.receiveShadow = true;
     scene.add(groundPlane);
     obstacleObjects.push(groundPlane);
 
-    // Enhanced terrain features
+    // Enhanced terrain features with more detail
     generateTerrainFeatures(size);
     generateRealisticMountains();
     generateComplexVegetation(size);
-    // generateCaverns(size);
+    generateDecorationElements(size);
 }
 
 function generateTerrainFeatures(islandWidth) {
@@ -729,44 +1079,115 @@ function generateComplexVegetation(islandWidth) {
     }
 }
 
+function generateDecorationElements(islandWidth) {
+    // Add scattered rocks for detail
+    const rockCount = 80;
+    const minDist = islandWidth / 2 + 50;
+    const maxDist = islandWidth / 2 + 2000;
+    
+    for (let i = 0; i < rockCount; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const dist = minDist + Math.random() * (maxDist - minDist);
+        const x = Math.cos(angle) * dist;
+        const z = Math.sin(angle) * dist;
+        
+        const rockSize = 15 + Math.random() * 40;
+        const rockGeo = new THREE.IcosahedronGeometry(rockSize, 4);
+        const rock = new THREE.Mesh(rockGeo, materials['stone']);
+        rock.position.set(x, 20, z);
+        rock.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+        rock.castShadow = true;
+        rock.receiveShadow = true;
+        scene.add(rock);
+    }
+    
+    // Add flower clusters
+    const flowerCount = 40;
+    for (let i = 0; i < flowerCount; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const dist = minDist + Math.random() * (maxDist - minDist);
+        const x = Math.cos(angle) * dist;
+        const z = Math.sin(angle) * dist;
+        
+        createFlowerCluster(x, z);
+    }
+}
+
+function createFlowerCluster(x, z) {
+    const flowerColors = ['#ff6b9d', '#ffd93d', '#6bcf7f', '#4d96ff'];
+    for (let i = 0; i < 3; i++) {
+        const offsetX = x + (Math.random() - 0.5) * 60;
+        const offsetZ = z + (Math.random() - 0.5) * 60;
+        
+        const flowerGeo = new THREE.SphereGeometry(8, 8, 8);
+        const flowerMat = new THREE.MeshLambertMaterial({ color: flowerColors[Math.floor(Math.random() * flowerColors.length)], emissive: flowerColors[Math.floor(Math.random() * flowerColors.length)], emissiveIntensity: 0.2 });
+        const flower = new THREE.Mesh(flowerGeo, flowerMat);
+        flower.position.set(offsetX, 15, offsetZ);
+        flower.castShadow = true;
+        flower.name = "nature_asset";
+        scene.add(flower);
+    }
+}
+
 function createTree(x, y, z, type) {
     const trunkSize = type === 'tall' ? 25 : 20;
-    const trunkHeight = type === 'tall' ? 80 : 60;
-    const leavesSize = type === 'tall' ? 80 : 70;
+    const trunkHeight = type === 'tall' ? 100 : 70;
+    const leavesSize = type === 'tall' ? 100 : 80;
     
-    const trunkGeo = new THREE.CylinderGeometry(trunkSize/2, trunkSize/2 * 1.2, trunkHeight, 8);
+    // Create more detailed trunk with segments
+    const trunkGeo = new THREE.CylinderGeometry(trunkSize/2, trunkSize/2 * 1.3, trunkHeight, 16, 8);
     const trunk = new THREE.Mesh(trunkGeo, materials['wood']);
     trunk.position.set(x, y + trunkHeight/2, z);
     trunk.castShadow = true;
+    trunk.receiveShadow = true;
     
-    const leavesGeo = new THREE.SphereGeometry(leavesSize/2, 8, 8);
-    const leaves = new THREE.Mesh(leavesGeo, materials['grass'][2]);
-    leaves.position.set(0, trunkHeight - leavesSize, 0);
-    leaves.castShadow = true;
+    // Create more detailed foliage with multiple spheres
+    const foliageGroup = new THREE.Group();
+    foliageGroup.position.set(0, trunkHeight * 0.6, 0);
     
-    trunk.add(leaves);
+    // Main canopy
+    const mainFoliage = new THREE.Mesh(new THREE.SphereGeometry(leavesSize/2, 16, 16), materials['grass'][2]);
+    mainFoliage.castShadow = true;
+    mainFoliage.receiveShadow = true;
+    foliageGroup.add(mainFoliage);
+    
+    // Secondary foliage for detail
+    const side1 = new THREE.Mesh(new THREE.SphereGeometry(leavesSize/3, 12, 12), materials['grass'][2]);
+    side1.position.set(leavesSize/3, 0, 0);
+    side1.castShadow = true;
+    foliageGroup.add(side1);
+    
+    const side2 = new THREE.Mesh(new THREE.SphereGeometry(leavesSize/3, 12, 12), materials['grass'][2]);
+    side2.position.set(-leavesSize/3, 0, 0);
+    side2.castShadow = true;
+    foliageGroup.add(side2);
+    
+    trunk.add(foliageGroup);
     trunk.userData = { bobOffset: Math.random()*100, baseY: y + trunkHeight/2 };
     trunk.name = "nature_asset";
     scene.add(trunk);
 }
 
 function createBush(x, y, z) {
-    const bushGeo = new THREE.SphereGeometry(30, 6, 6);
+    const bushGeo = new THREE.IcosahedronGeometry(35, 3);
     const bush = new THREE.Mesh(bushGeo, materials['grass'][2]);
-    bush.position.set(x, y + 30, z);
+    bush.position.set(x, y + 35, z);
     bush.castShadow = true;
-    bush.userData = { bobOffset: Math.random()*100, baseY: y + 30 };
+    bush.receiveShadow = true;
+    bush.userData = { bobOffset: Math.random()*100, baseY: y + 35 };
     bush.name = "nature_asset";
     scene.add(bush);
 }
 
 function createGrassPatch(x, z) {
-    for (let i = 0; i < 5; i++) {
-        const offsetX = x + (Math.random() - 0.5) * 100;
-        const offsetZ = z + (Math.random() - 0.5) * 100;
-        const grassGeo = new THREE.BoxGeometry(20, 5, 20);
+    for (let i = 0; i < 8; i++) {
+        const offsetX = x + (Math.random() - 0.5) * 120;
+        const offsetZ = z + (Math.random() - 0.5) * 120;
+        const grassGeo = new THREE.BoxGeometry(25, 8, 25);
         const grass = new THREE.Mesh(grassGeo, materials['grass']);
-        grass.position.set(offsetX, 5, offsetZ);
+        grass.position.set(offsetX, 8, offsetZ);
+        grass.castShadow = true;
+        grass.receiveShadow = true;
         scene.add(grass);
     }
 }
@@ -897,6 +1318,11 @@ function spawnBlock(type) {
     
     updateCursor(true);
     saveUndoState();
+    
+    // Play block selected sound
+    if (audioManager) {
+        audioManager.playSound('ui', 500, 0.12);
+    }
 }
 
 function onPointerUp(e) {
@@ -924,6 +1350,11 @@ function onPointerUp(e) {
             // Add particle effect
             createParticle(newBlock.position, newBlock.userData.color || '#ffffff');
             
+            // Play block placement sound
+            if (audioManager) {
+                audioManager.playSound('place', 450, 0.15);
+            }
+            
             saveUndoState();
         }
     } else {
@@ -937,6 +1368,12 @@ function onPointerUp(e) {
             placementGhost = new THREE.Mesh(target.geometry, new THREE.MeshBasicMaterial({color:0x00ff00, wireframe:true}));
             scene.add(placementGhost);
             updateCursor(true);
+            
+            // Play block pickup sound
+            if (audioManager) {
+                audioManager.playSound('ui', 550, 0.12);
+            }
+            
             saveUndoState();
         }
     }
@@ -968,6 +1405,11 @@ function dropCarried() {
     if(placementGhost) scene.remove(placementGhost);
     carriedBlock = null; placementGhost = null;
     updateCursor(false);
+    
+    // Play block deletion sound
+    if (audioManager) {
+        audioManager.playSound('delete', 400, 0.15);
+    }
 }
 
 function updatePointer(e) { pointer.set((e.clientX/window.innerWidth)*2-1, -(e.clientY/window.innerHeight)*2+1); }
@@ -1325,6 +1767,9 @@ function downloadWorld() {
     a.href = URL.createObjectURL(blob);
     a.download = `voxel_world_${w.id}.json`;
     a.click();
+    
+    // Play download sound
+    if (audioManager) audioManager.playSound('ui', 700, 0.15);
 }
 
 function handleFileLoad(e) {
@@ -1336,7 +1781,11 @@ function handleFileLoad(e) {
             const data = JSON.parse(evt.target.result);
             clearScene();
             loadState(data);
-        } catch(err) { alert("Invalid file"); }
+            if (audioManager) audioManager.playSound('ui', 700, 0.15);
+        } catch(err) { 
+            alert("Invalid file");
+            if (audioManager) audioManager.playSound('error', 300, 0.15);
+        }
     };
     r.readAsText(f);
     e.target.value = '';
